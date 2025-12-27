@@ -124,6 +124,9 @@ export class Car {
   // Display number for visual identification
   displayNumber: number = 0;
 
+  // Tipo de obstáculo para renderizado diferente
+  obstacleType: 'car' | 'barrier' | 'danger' = 'car';
+
   constructor(x: number, y: number, width: number, height: number, controlType: "AI" | "KEYS" | "DUMMY" = "AI", maxSpeed: number = 3) {
     this.x = x;
     this.y = y;
@@ -204,6 +207,28 @@ export class Car {
             this.overtakenCars.add(trafficCar);
             this.overtakeCount++;
             this.#logDecision(sensorOffsets, "OVERTAKE");
+          }
+        }
+
+        // STAGNATION DETECTION: Penalizar autos que giran en círculos
+        // Solo después del período de gracia inicial
+        if (this.frameCount > Car.GRACE_PERIOD) {
+          // Detectar si está avanzando (Y debe disminuir)
+          if (this.y < this.bestY - 5) {
+            // Progreso real - reset stagnation
+            this.bestY = this.y;
+            this.stagnationFrames = 0;
+          } else {
+            // Sin progreso
+            this.stagnationFrames++;
+          }
+
+          // Matar por estancamiento (girando en círculos sin avanzar)
+          if (this.stagnationFrames > Car.STAGNATION_LIMIT) {
+            this.damaged = true;
+            this.deathReason = "STAGNATION";
+            this.#logDecision(sensorOffsets, "STAGNATION_DEATH");
+            return;
           }
         }
       }
@@ -397,60 +422,95 @@ export class Car {
 
     const w = this.width;
     const h = this.height;
-    const radius = 5;
     const isTraffic = this.controlType === "DUMMY";
 
-    // Cuerpo del auto - color solido (sin gradientes costosos)
-    ctx.beginPath();
-    ctx.roundRect(-w / 2, -h / 2, w, h, radius);
-
-    if (this.damaged) {
-      ctx.fillStyle = "#4a566d";
-    } else if (isTraffic) {
-      ctx.fillStyle = "#fb923c";
-    } else {
-      ctx.fillStyle = "#38bdf8";
-    }
-    ctx.fill();
-
-    // Borde
-    ctx.strokeStyle = this.damaged
-      ? "rgba(148, 163, 184, 0.3)"
-      : isTraffic
-        ? "rgba(234, 88, 12, 0.6)"
-        : "rgba(14, 165, 233, 0.6)";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Ventana (solo si no está dañado)
-    if (!this.damaged) {
-      ctx.fillStyle = "#1e2331";
+    // Diferentes estilos según tipo de obstáculo
+    if (isTraffic && this.obstacleType === 'barrier') {
+      // BARRERA GRIS (camión/muro)
       ctx.beginPath();
-      ctx.roundRect(-w * 0.35, -h * 0.32, w * 0.7, h * 0.28, 2);
+      ctx.roundRect(-w / 2, -h / 2, w, h, 3);
+      ctx.fillStyle = this.damaged ? "#3a4459" : "#64748b";
       ctx.fill();
-    }
+      ctx.strokeStyle = "rgba(100, 116, 139, 0.8)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Líneas horizontales decorativas
+      ctx.strokeStyle = "rgba(30, 35, 49, 0.5)";
+      ctx.lineWidth = 1;
+      for (let i = -h/3; i < h/2; i += 15) {
+        ctx.beginPath();
+        ctx.moveTo(-w/2 + 4, i);
+        ctx.lineTo(w/2 - 4, i);
+        ctx.stroke();
+      }
+    } else if (isTraffic && this.obstacleType === 'danger') {
+      // ZONA ROJA (peligro horizontal)
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 2);
+      ctx.fillStyle = this.damaged ? "#4a566d" : "#991b1b";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(220, 38, 38, 0.8)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Patrón de peligro (rayas)
+      ctx.fillStyle = "rgba(252, 165, 165, 0.4)";
+      for (let i = -w/2; i < w/2; i += 12) {
+        ctx.fillRect(i, -h/2 + 2, 6, h - 4);
+      }
+    } else {
+      // AUTO NORMAL (naranja o azul)
+      const radius = 5;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, radius);
 
-    // Luces traseras
-    if (!this.damaged) {
-      ctx.fillStyle = isTraffic ? "#fbbf24" : "#ef4444";
-      ctx.fillRect(-w / 2 + 2, h / 2 - 5, 4, 3);
-      ctx.fillRect(w / 2 - 6, h / 2 - 5, 4, 3);
-    }
+      if (this.damaged) {
+        ctx.fillStyle = "#4a566d";
+      } else if (isTraffic) {
+        ctx.fillStyle = "#fb923c";
+      } else {
+        ctx.fillStyle = "#38bdf8";
+      }
+      ctx.fill();
 
-    // Luces delanteras
-    if (!this.damaged) {
-      ctx.fillStyle = "#f8fafc";
-      ctx.fillRect(-w / 2 + 2, -h / 2 + 2, 4, 3);
-      ctx.fillRect(w / 2 - 6, -h / 2 + 2, 4, 3);
-    }
+      // Borde
+      ctx.strokeStyle = this.damaged
+        ? "rgba(148, 163, 184, 0.3)"
+        : isTraffic
+          ? "rgba(234, 88, 12, 0.6)"
+          : "rgba(14, 165, 233, 0.6)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
-    // Numero (solo AI con displayNumber)
-    if (this.displayNumber > 0 && this.controlType === "AI") {
-      ctx.fillStyle = this.damaged ? "rgba(148, 163, 184, 0.5)" : "#1e2331";
-      ctx.font = "bold 9px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(this.displayNumber.toString(), 0, h * 0.15);
+      // Ventana (solo si no está dañado)
+      if (!this.damaged) {
+        ctx.fillStyle = "#1e2331";
+        ctx.beginPath();
+        ctx.roundRect(-w * 0.35, -h * 0.32, w * 0.7, h * 0.28, 2);
+        ctx.fill();
+      }
+
+      // Luces traseras
+      if (!this.damaged) {
+        ctx.fillStyle = isTraffic ? "#fbbf24" : "#ef4444";
+        ctx.fillRect(-w / 2 + 2, h / 2 - 5, 4, 3);
+        ctx.fillRect(w / 2 - 6, h / 2 - 5, 4, 3);
+      }
+
+      // Luces delanteras
+      if (!this.damaged) {
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillRect(-w / 2 + 2, -h / 2 + 2, 4, 3);
+        ctx.fillRect(w / 2 - 6, -h / 2 + 2, 4, 3);
+      }
+
+      // Numero (solo AI con displayNumber)
+      if (this.displayNumber > 0 && this.controlType === "AI") {
+        ctx.fillStyle = this.damaged ? "rgba(148, 163, 184, 0.5)" : "#1e2331";
+        ctx.font = "bold 9px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(this.displayNumber.toString(), 0, h * 0.15);
+      }
     }
 
     ctx.restore();
