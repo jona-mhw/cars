@@ -16,23 +16,26 @@
     <div class="dashboard">
       <div class="header-row">
         <h1>NEURO DRIVE</h1>
-        <a href="/how-this-works.html" class="docs-link" title="Documentación técnica">
-          <span>?</span>
-        </a>
+        <div class="header-right">
+          <span id="fpsCounter" class="fps-badge">60</span>
+          <a href="/how-this-works.html" class="docs-link" title="Documentación técnica">
+            <span>?</span>
+          </a>
+        </div>
       </div>
       <p class="subtitle">IA aprendiendo a conducir en tiempo real</p>
 
       <div class="legend">
-        <div class="legend-title">🎨 Colores</div>
-        <div class="legend-item"><span class="dot cyan"></span> IA Aprendiendo</div>
-        <div class="legend-item"><span class="dot cyan-bright"></span> Líder Actual</div>
-        <div class="legend-item"><span class="dot orange"></span> Obstáculos</div>
-        <div class="legend-item"><span class="dot gray"></span> Chocados</div>
+        <div class="legend-title">Colores</div>
+        <div class="legend-item"><span class="dot cyan"></span> IA</div>
+        <div class="legend-item"><span class="dot cyan-bright"></span> Líder</div>
+        <div class="legend-item"><span class="dot orange"></span> Tráfico</div>
+        <div class="legend-item"><span class="dot gray"></span> Chocado</div>
       </div>
 
       <div class="info-box">
         <strong>¿Qué está pasando?</strong>
-        <p>30 coches con IA compiten. El que llegue más lejos pasa su "cerebro" (con mutaciones) a la siguiente generación. Solo mueren por colisión.</p>
+        <p>8 coches con IA compiten. El que llegue más lejos pasa su cerebro (con mutaciones) a la siguiente generación.</p>
       </div>
 
       <div class="stats-grid">
@@ -50,7 +53,7 @@
         </div>
         <div class="stat-card">
           <div class="stat-label">Vivos</div>
-          <div id="aliveCount" class="stat-value">0 / 30</div>
+          <div id="aliveCount" class="stat-value">0 / 8</div>
         </div>
       </div>
 
@@ -70,12 +73,9 @@
           <label class="stat-label">Mutación: <span id="mutationVal">0.1</span></label>
           <input type="range" id="mutationRate" min="0" max="1" step="0.01" value="0.1">
         </div>
-        <button id="saveBest">💾 Guardar Mejor Cerebro</button>
-        <button id="discardBrain"
-          style="background: transparent; border: 1px solid rgba(255,0,0,0.5); color: #ff4d4d;">🔄 Reiniciar
-          Evolución</button>
-        <button id="exportLogs"
-          style="background: rgba(100,200,255,0.2); border: 1px solid rgba(100,200,255,0.5); color: #64c8ff;">📊 Exportar Logs IA</button>
+        <button id="saveBest">Guardar Cerebro</button>
+        <button id="discardBrain" class="btn-danger">Reiniciar</button>
+        <button id="exportLogs" class="btn-secondary">Exportar Logs</button>
       </div>
 
       <div class="live-feed-container">

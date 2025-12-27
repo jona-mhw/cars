@@ -141,6 +141,9 @@ export class Car {
       this.sensor = new Sensor(this);
       // Network: 7 sensors -> 8 hidden neurons -> 2 outputs (accel, steer)
       this.brain = new Network([this.sensor.rayCount, 8, 2]);
+      // Impulso inicial - todos parten moviéndose
+      this.speed = 1;
+      this.controls.forward = true;
     }
 
     if (controlType === "KEYS") {
@@ -172,14 +175,14 @@ export class Car {
           // output[0]: acceleration intensity (-1 to 1)
           // output[1]: steering (-1 = full left, 0 = straight, 1 = full right)
 
-          // Acceleration: map from [-1,1] to [0,1] for forward bias
-          const accelIntensity = (outputs[0] + 1) / 2; // Now 0 to 1
-          this.controls.forward = accelIntensity > 0.3; // Bias towards moving
+          // Acceleration: casi siempre acelerar (threshold bajo)
+          const accelIntensity = (outputs[0] + 1) / 2; // 0 to 1
+          this.controls.forward = accelIntensity > 0.1; // Solo frena si output muy negativo
 
           // Steering: continuous value stored for smooth turning
           this.steeringIntensity = outputs[1]; // -1 to 1
 
-          this.controls.left = false;  // We'll use steeringIntensity directly
+          this.controls.left = false;
           this.controls.right = false;
           this.controls.reverse = false;
         }
@@ -387,33 +390,70 @@ export class Car {
     this.y -= Math.cos(this.angle) * this.speed;
   }
 
-  draw(ctx: CanvasRenderingContext2D, color: string, drawSensor: boolean = false) {
-    if (this.damaged) ctx.fillStyle = "gray";
-    else ctx.fillStyle = color;
+  draw(ctx: CanvasRenderingContext2D, _color: string, drawSensor: boolean = false) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(-this.angle);
 
+    const w = this.width;
+    const h = this.height;
+    const radius = 5;
+    const isTraffic = this.controlType === "DUMMY";
+
+    // Cuerpo del auto - color solido (sin gradientes costosos)
     ctx.beginPath();
-    const polygon = this.getPolygon();
-    ctx.moveTo(polygon[0].x, polygon[0].y);
-    for (let i = 1; i < polygon.length; i++) {
-      ctx.lineTo(polygon[i].x, polygon[i].y);
+    ctx.roundRect(-w / 2, -h / 2, w, h, radius);
+
+    if (this.damaged) {
+      ctx.fillStyle = "#4a566d";
+    } else if (isTraffic) {
+      ctx.fillStyle = "#fb923c";
+    } else {
+      ctx.fillStyle = "#38bdf8";
     }
     ctx.fill();
 
-    // Draw number on car (only for AI cars with displayNumber)
-    if (this.displayNumber > 0 && this.controlType === "AI") {
-      ctx.save();
-      ctx.translate(this.x, this.y);
-      ctx.rotate(-this.angle);
+    // Borde
+    ctx.strokeStyle = this.damaged
+      ? "rgba(148, 163, 184, 0.3)"
+      : isTraffic
+        ? "rgba(234, 88, 12, 0.6)"
+        : "rgba(14, 165, 233, 0.6)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
-      // Number styling
-      ctx.fillStyle = this.damaged ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.8)";
-      ctx.font = "bold 11px Arial";
+    // Ventana (solo si no está dañado)
+    if (!this.damaged) {
+      ctx.fillStyle = "#1e2331";
+      ctx.beginPath();
+      ctx.roundRect(-w * 0.35, -h * 0.32, w * 0.7, h * 0.28, 2);
+      ctx.fill();
+    }
+
+    // Luces traseras
+    if (!this.damaged) {
+      ctx.fillStyle = isTraffic ? "#fbbf24" : "#ef4444";
+      ctx.fillRect(-w / 2 + 2, h / 2 - 5, 4, 3);
+      ctx.fillRect(w / 2 - 6, h / 2 - 5, 4, 3);
+    }
+
+    // Luces delanteras
+    if (!this.damaged) {
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillRect(-w / 2 + 2, -h / 2 + 2, 4, 3);
+      ctx.fillRect(w / 2 - 6, -h / 2 + 2, 4, 3);
+    }
+
+    // Numero (solo AI con displayNumber)
+    if (this.displayNumber > 0 && this.controlType === "AI") {
+      ctx.fillStyle = this.damaged ? "rgba(148, 163, 184, 0.5)" : "#1e2331";
+      ctx.font = "bold 9px Arial";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(this.displayNumber.toString(), 0, 0);
-
-      ctx.restore();
+      ctx.fillText(this.displayNumber.toString(), 0, h * 0.15);
     }
+
+    ctx.restore();
 
     if (this.sensor && drawSensor) {
       this.sensor.draw(ctx);
