@@ -1,0 +1,441 @@
+import { Sensor } from "./sensor";
+import { Network } from "./network";
+
+// ============================================================
+// AI LEARNING LOG SYSTEM
+// Captures decisions and context for analysis
+// ============================================================
+export interface DecisionLog {
+  frame: number;
+  timestamp: number;
+  // Context
+  position: { x: number; y: number };
+  speed: number;
+  angle: number;
+  lane: number; // Estimated lane (0, 1, 2)
+  // Sensor readings (normalized 0-1, where 1 = obstacle very close)
+  sensors: number[];
+  // Neural network outputs (raw)
+  outputs: number[];
+  // Interpreted actions
+  actions: {
+    accelerating: boolean;
+    turningLeft: boolean;
+    turningRight: boolean;
+  };
+  // Events
+  event?: "OVERTAKE" | "NEAR_MISS" | "LANE_CHANGE" | "COLLISION" | "STAGNATION_DEATH";
+  overtakeCount: number;
+  distanceTraveled: number;
+}
+
+export interface GenerationSummary {
+  generation: number;
+  bestCarId: number;
+  totalOvertakes: number;
+  maxDistance: number;
+  survivalFrames: number;
+  deathReason: "COLLISION" | "STAGNATION" | "NO_PROGRESS" | "ALIVE";
+  // Behavioral patterns detected
+  patterns: string[];
+  // Key decisions that led to success/failure
+  keyMoments: DecisionLog[];
+}
+
+// Global log storage - accessible for analysis
+export const AILearningLog = {
+  currentGeneration: 1,
+  generationSummaries: [] as GenerationSummary[],
+  bestCarLogs: [] as DecisionLog[],
+
+  // For pattern analysis
+  getLastNGenerations(n: number): GenerationSummary[] {
+    return this.generationSummaries.slice(-n);
+  },
+
+  // Export for analysis
+  exportToJSON(): string {
+    return JSON.stringify({
+      generations: this.generationSummaries,
+      bestCarDecisions: this.bestCarLogs
+    }, null, 2);
+  },
+
+  // Clear old data to prevent memory issues
+  pruneOldData(keepGenerations: number = 50) {
+    if (this.generationSummaries.length > keepGenerations) {
+      this.generationSummaries = this.generationSummaries.slice(-keepGenerations);
+    }
+  }
+};
+
+export class Car {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  speed: number = 0;
+  acceleration: number = 0.2;
+  maxSpeed: number;
+  friction: number = 0.05;
+  angle: number = 0;
+  damaged: boolean = false;
+  controlType: "AI" | "KEYS" | "DUMMY";
+
+  // ============================================================
+  // ANTI-EXPLOIT: Overtake-based progression
+  // Car MUST overtake traffic to survive, not just move forward
+  // ============================================================
+  overtakenCars: Set<Car> = new Set(); // Track which cars we've passed
+  overtakeCount: number = 0;
+  framesSinceLastOvertake: number = 0;
+  static readonly OVERTAKE_TIMEOUT = 120; // 2 seconds without overtaking = death (reduced since traffic is dense)
+  static readonly GRACE_PERIOD = 90; // 1.5 seconds grace at start
+
+  // Stagnation detection - backup check
+  bestY: number = Infinity;
+  stagnationFrames: number = 0;
+  static readonly STAGNATION_LIMIT = 90; // 1.5 seconds without any forward progress
+
+  // Track movement direction to detect oscillation (vaivén)
+  previousY: number;
+  directionChanges: number = 0;
+  static readonly MAX_DIRECTION_CHANGES = 8;
+  lastDirection: number = 0;
+
+  sensor: Sensor | null = null;
+  brain: Network | null = null;
+  controls: { forward: boolean; left: boolean; right: boolean; reverse: boolean };
+  fitness: number = 0;
+
+  // Continuous steering for smooth turns (-1 = full left, 1 = full right)
+  steeringIntensity: number = 0;
+
+  // ============================================================
+  // LOGGING SYSTEM
+  // ============================================================
+  id: number;
+  static nextId: number = 0;
+  decisionLog: DecisionLog[] = [];
+  frameCount: number = 0;
+  lastOutputs: number[] = [];
+  deathReason: "COLLISION" | "STAGNATION" | "NO_PROGRESS" | "ALIVE" = "ALIVE";
+
+  // Display number for visual identification
+  displayNumber: number = 0;
+
+  constructor(x: number, y: number, width: number, height: number, controlType: "AI" | "KEYS" | "DUMMY" = "AI", maxSpeed: number = 3) {
+    this.x = x;
+    this.y = y;
+    this.bestY = y;
+    this.previousY = y;
+    this.width = width;
+    this.height = height;
+    this.maxSpeed = maxSpeed;
+    this.controlType = controlType;
+    this.id = Car.nextId++;
+
+    this.controls = { forward: false, left: false, right: false, reverse: false };
+
+    if (controlType === "AI") {
+      this.sensor = new Sensor(this);
+      // Network: 7 sensors -> 8 hidden neurons -> 2 outputs (accel, steer)
+      this.brain = new Network([this.sensor.rayCount, 8, 2]);
+    }
+
+    if (controlType === "KEYS") {
+      this.sensor = new Sensor(this);
+      this.#addKeyboardListeners();
+    }
+
+    if (controlType === "DUMMY") {
+      this.controls.forward = true;
+    }
+  }
+
+  update(roadBorders: { x: number; y: number }[][], traffic: Car[] = []) {
+    if (!this.damaged) {
+      this.#move();
+      this.frameCount++;
+
+      let sensorOffsets: number[] = [];
+
+      if (this.sensor) {
+        this.sensor.update(roadBorders, traffic);
+        sensorOffsets = this.sensor.readings.map((s: any) => s == null ? 0 : 1 - s.offset);
+
+        if (this.brain) {
+          const outputs = Network.feedForward(sensorOffsets, this.brain);
+          this.lastOutputs = [...outputs];
+
+          // CONTINUOUS CONTROL:
+          // output[0]: acceleration intensity (-1 to 1)
+          // output[1]: steering (-1 = full left, 0 = straight, 1 = full right)
+
+          // Acceleration: map from [-1,1] to [0,1] for forward bias
+          const accelIntensity = (outputs[0] + 1) / 2; // Now 0 to 1
+          this.controls.forward = accelIntensity > 0.3; // Bias towards moving
+
+          // Steering: continuous value stored for smooth turning
+          this.steeringIntensity = outputs[1]; // -1 to 1
+
+          this.controls.left = false;  // We'll use steeringIntensity directly
+          this.controls.right = false;
+          this.controls.reverse = false;
+        }
+      }
+
+      // Only AI cars check for collision
+      if (this.controlType !== "DUMMY") {
+        this.#assessDamage(roadBorders, traffic);
+
+        if (this.damaged) {
+          this.deathReason = "COLLISION";
+          this.#logDecision(sensorOffsets, "COLLISION");
+          return;
+        }
+
+        // Track overtakes for stats (optional, no death penalty)
+        for (const trafficCar of traffic) {
+          if (this.y < trafficCar.y - 30 && !this.overtakenCars.has(trafficCar)) {
+            this.overtakenCars.add(trafficCar);
+            this.overtakeCount++;
+            this.#logDecision(sensorOffsets, "OVERTAKE");
+          }
+        }
+      }
+
+      // FITNESS = DISTANCE TRAVELED (simple and clear)
+      // Lower Y = further traveled (Y decreases as car moves forward)
+      this.fitness = 100 - this.y; // Distance in "meters"
+
+      // Log decisions periodically (every 60 frames) for analysis
+      if (this.frameCount % 60 === 0) {
+        this.#logDecision(sensorOffsets);
+      }
+    }
+  }
+
+  // ============================================================
+  // LOGGING: Capture decision context for analysis
+  // ============================================================
+  #logDecision(sensors: number[], event?: DecisionLog["event"]) {
+    if (this.controlType !== "AI") return;
+
+    // Estimate lane based on X position (rough approximation)
+    const laneWidth = 50; // Approximate lane width
+    const lane = Math.round(this.x / laneWidth) - 1;
+
+    const log: DecisionLog = {
+      frame: this.frameCount,
+      timestamp: Date.now(),
+      position: { x: this.x, y: this.y },
+      speed: this.speed,
+      angle: this.angle,
+      lane: Math.max(0, Math.min(2, lane)),
+      sensors: [...sensors],
+      outputs: [...this.lastOutputs],
+      actions: {
+        accelerating: this.controls.forward,
+        turningLeft: this.controls.left,
+        turningRight: this.controls.right
+      },
+      event,
+      overtakeCount: this.overtakeCount,
+      distanceTraveled: 100 - this.y
+    };
+
+    this.decisionLog.push(log);
+
+    // Keep only last 200 entries to prevent memory issues
+    if (this.decisionLog.length > 200) {
+      this.decisionLog = this.decisionLog.slice(-200);
+    }
+  }
+
+  // Get summary of this car's behavior for generation analysis
+  getSummary(): { patterns: string[], keyMoments: DecisionLog[] } {
+    const patterns: string[] = [];
+
+    // Analyze behavior patterns
+    const avgSpeed = this.decisionLog.reduce((sum, d) => sum + d.speed, 0) / Math.max(1, this.decisionLog.length);
+
+    if (this.overtakeCount === 0) {
+      patterns.push("PASSIVE: Never overtook any car");
+    } else if (this.overtakeCount >= 5) {
+      patterns.push(`AGGRESSIVE: Overtook ${this.overtakeCount} cars`);
+    }
+
+    if (avgSpeed < 1) {
+      patterns.push("SLOW: Average speed very low - possible exploit attempt");
+    } else if (avgSpeed > 3) {
+      patterns.push("FAST: Maintaining high speed");
+    }
+
+    // Check for lane preferences
+    const laneCounts = [0, 0, 0];
+    this.decisionLog.forEach(d => laneCounts[d.lane]++);
+    const preferredLane = laneCounts.indexOf(Math.max(...laneCounts));
+    patterns.push(`LANE_PREF: Mostly lane ${preferredLane}`);
+
+    // Key moments: first overtake, death, near misses
+    const keyMoments = this.decisionLog.filter(d => d.event);
+
+    return { patterns, keyMoments };
+  }
+
+  #assessDamage(roadBorders: { x: number; y: number }[][], traffic: Car[]) {
+    for (let i = 0; i < roadBorders.length; i++) {
+      const border = roadBorders[i];
+      if (this.#polysIntersect(this.getPolygon(), border)) {
+        this.damaged = true;
+        return;
+      }
+    }
+    for (let i = 0; i < traffic.length; i++) {
+      if (this.#polysIntersect(this.getPolygon(), traffic[i].getPolygon())) {
+        this.damaged = true;
+        return;
+      }
+    }
+  }
+
+  getPolygon() {
+    const points = [];
+    const rad = Math.hypot(this.width, this.height) / 2;
+    const alpha = Math.atan2(this.width, this.height);
+    points.push({
+      x: this.x - Math.sin(this.angle - alpha) * rad,
+      y: this.y - Math.cos(this.angle - alpha) * rad
+    });
+    points.push({
+      x: this.x - Math.sin(this.angle + alpha) * rad,
+      y: this.y - Math.cos(this.angle + alpha) * rad
+    });
+    points.push({
+      x: this.x - Math.sin(Math.PI + this.angle - alpha) * rad,
+      y: this.y - Math.cos(Math.PI + this.angle - alpha) * rad
+    });
+    points.push({
+      x: this.x - Math.sin(Math.PI + this.angle + alpha) * rad,
+      y: this.y - Math.cos(Math.PI + this.angle + alpha) * rad
+    });
+    return points;
+  }
+
+  #polysIntersect(poly1: { x: number; y: number }[], poly2: { x: number; y: number }[]) {
+    for (let i = 0; i < poly1.length; i++) {
+      for (let j = 0; j < poly2.length - 1; j++) {
+        const touch = this.#getIntersection(
+          poly1[i],
+          poly1[(i + 1) % poly1.length],
+          poly2[j],
+          poly2[j + 1]
+        );
+        if (touch) return true;
+      }
+    }
+    return false;
+  }
+
+  #getIntersection(A: any, B: any, C: any, D: any) {
+    const tTop = (D.x - C.x) * (A.y - C.y) - (D.y - C.y) * (A.x - C.x);
+    const uTop = (C.y - A.y) * (A.x - B.x) - (C.x - A.x) * (A.y - B.y);
+    const bottom = (D.y - C.y) * (B.x - A.x) - (D.x - C.x) * (B.y - A.y);
+
+    if (bottom != 0) {
+      const t = tTop / bottom;
+      const u = uTop / bottom;
+      if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+        return {
+          x: A.x + (B.x - A.x) * t,
+          y: A.y + (B.y - A.y) * t,
+          offset: t
+        };
+      }
+    }
+    return null;
+  }
+
+  #move() {
+    if (this.controls.forward) this.speed += this.acceleration;
+    if (this.controls.reverse) this.speed -= this.acceleration;
+
+    if (this.speed > this.maxSpeed) this.speed = this.maxSpeed;
+    if (this.speed < -this.maxSpeed / 2) this.speed = -this.maxSpeed / 2;
+
+    if (this.speed > 0) this.speed -= this.friction;
+    if (this.speed < 0) this.speed += this.friction;
+
+    if (Math.abs(this.speed) < this.friction) this.speed = 0;
+
+    if (this.speed != 0) {
+      const flip = this.speed > 0 ? 1 : -1;
+
+      // CONTINUOUS STEERING: use steeringIntensity for smooth turns
+      // steeringIntensity: -1 = full left, 0 = straight, 1 = full right
+      // Max turn rate: 0.04 radians per frame
+      const turnRate = 0.04;
+      this.angle -= this.steeringIntensity * turnRate * flip;
+
+      // Also support binary controls for KEYS mode
+      if (this.controls.left) this.angle += 0.03 * flip;
+      if (this.controls.right) this.angle -= 0.03 * flip;
+    }
+
+    this.x -= Math.sin(this.angle) * this.speed;
+    this.y -= Math.cos(this.angle) * this.speed;
+  }
+
+  draw(ctx: CanvasRenderingContext2D, color: string, drawSensor: boolean = false) {
+    if (this.damaged) ctx.fillStyle = "gray";
+    else ctx.fillStyle = color;
+
+    ctx.beginPath();
+    const polygon = this.getPolygon();
+    ctx.moveTo(polygon[0].x, polygon[0].y);
+    for (let i = 1; i < polygon.length; i++) {
+      ctx.lineTo(polygon[i].x, polygon[i].y);
+    }
+    ctx.fill();
+
+    // Draw number on car (only for AI cars with displayNumber)
+    if (this.displayNumber > 0 && this.controlType === "AI") {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(-this.angle);
+
+      // Number styling
+      ctx.fillStyle = this.damaged ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.8)";
+      ctx.font = "bold 11px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(this.displayNumber.toString(), 0, 0);
+
+      ctx.restore();
+    }
+
+    if (this.sensor && drawSensor) {
+      this.sensor.draw(ctx);
+    }
+  }
+
+  #addKeyboardListeners() {
+    document.onkeydown = (event) => {
+      switch (event.key) {
+        case "ArrowLeft": this.controls.left = true; break;
+        case "ArrowRight": this.controls.right = true; break;
+        case "ArrowUp": this.controls.forward = true; break;
+        case "ArrowDown": this.controls.reverse = true; break;
+      }
+    };
+    document.onkeyup = (event) => {
+      switch (event.key) {
+        case "ArrowLeft": this.controls.left = false; break;
+        case "ArrowRight": this.controls.right = false; break;
+        case "ArrowUp": this.controls.forward = false; break;
+        case "ArrowDown": this.controls.reverse = false; break;
+      }
+    };
+  }
+}
