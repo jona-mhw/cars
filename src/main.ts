@@ -22,6 +22,12 @@ const statusBar = document.getElementById("statusBar") as HTMLDivElement;
 const liveFeed = document.getElementById("liveFeed") as HTMLDivElement;
 const trendIndicator = document.getElementById("trendIndicator") as HTMLSpanElement;
 const progressBar = document.getElementById("progressBar") as HTMLDivElement;
+const fpsCounter = document.getElementById("fpsCounter") as HTMLSpanElement;
+
+// FPS tracking
+let lastTime = performance.now();
+let frameCount = 0;
+let fps = 60;
 
 // ============================================================
 // LIVE FEED SYSTEM - Real-time activity logging
@@ -235,6 +241,16 @@ function lerp(a: number, b: number, t: number) {
 }
 
 function animate(time: number = 0) {
+  // FPS calculation
+  frameCount++;
+  const now = performance.now();
+  if (now - lastTime >= 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    lastTime = now;
+    if (fpsCounter) fpsCounter.textContent = fps.toString();
+  }
+
   // Update traffic
   for (let i = 0; i < traffic.length; i++) {
     traffic[i].update(road.borders);
@@ -277,25 +293,22 @@ function animate(time: number = 0) {
 
   road.draw(carCtx);
 
-  // Draw traffic (obstacles) - orange/red color
+  // Draw traffic (obstacles) - el color se maneja internamente
   for (let i = 0; i < traffic.length; i++) {
-    traffic[i].draw(carCtx, "#ff6b35");
+    traffic[i].draw(carCtx, "#fb923c");
   }
 
-  // Draw all AI cars (transparent)
-  carCtx.globalAlpha = 0.2;
+  // Draw all AI cars (semi-transparentes)
+  carCtx.globalAlpha = 0.35;
   for (let i = 0; i < cars.length; i++) {
     if (cars[i] !== visualBestCar) {
-      cars[i].draw(carCtx, "#00d2ff");
+      cars[i].draw(carCtx, "#38bdf8");
     }
   }
   carCtx.globalAlpha = 1;
 
-  // Draw leader with glow effect
-  carCtx.shadowColor = "#00d2ff";
-  carCtx.shadowBlur = 15;
-  visualBestCar.draw(carCtx, "#00d2ff", true);
-  carCtx.shadowBlur = 0;
+  // Draw leader (sin glow extra, ya tiene shadow interno)
+  visualBestCar.draw(carCtx, "#38bdf8", true);
 
   carCtx.restore();
 
