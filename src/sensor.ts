@@ -1,15 +1,25 @@
 import { Car } from "./car";
 
+// Configuración global de sensores (modificable desde UI)
+export const SensorConfig = {
+    rayLength: 200,  // Valor por defecto
+    minRayLength: 50,
+    maxRayLength: 400
+};
+
 export class Sensor {
     car: Car;
     rayCount: number = 7;  // More sensors for better perception
-    rayLength: number = 200;  // Longer range for earlier detection
     raySpread: number = Math.PI / 2;
     rays: { x: number; y: number }[][] = [];
     readings: { x: number; y: number; offset: number }[] = [];
 
     constructor(car: Car) {
         this.car = car;
+    }
+
+    get rayLength(): number {
+        return SensorConfig.rayLength;
     }
 
     update(roadBorders: { x: number; y: number }[][], traffic: Car[] = []) {
