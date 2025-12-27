@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How This Works - Neuro Drive Technical Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0c10;
+      --bg-secondary: #12141a;
+      --bg-tertiary: #1a1d24;
+      --text-primary: #f0f0f0;
+      --text-secondary: #a0a0a0;
+      --text-muted: #606060;
+      --accent-cyan: #00d2ff;
+      --accent-green: #00ff88;
+      --accent-purple: #b464ff;
+      --accent-orange: #ff6b35;
+      --border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(10, 12, 16, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      z-index: 100;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 50px;
+      box-sizing: border-box;
+    }
+
+    nav a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    .nav-title {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* Main container */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 70px 24px 60px;
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 60px 0;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 60px;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+    }
+
+    .hero .subtitle {
+      font-size: 1.3rem;
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+    }
+
+    .hero .tech-stack {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .tech-badge {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* Table of contents */
+    .toc {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 48px;
+    }
+
+    .toc h2 {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .toc ul {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 8px;
+    }
+
+    .toc a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+
+    .toc a:hover {
+      background: var(--bg-tertiary);
+    }
+
+    .toc .section-num {
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+    }
+
+    /* Executive Summary */
+    .executive-summary {
+      background: linear-gradient(135deg, rgba(0, 210, 255, 0.1), rgba(0, 255, 136, 0.05));
+      border: 1px solid rgba(0, 210, 255, 0.3);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 48px;
+    }
+
+    .executive-summary h2 {
+      color: var(--accent-cyan);
+      font-size: 1.3rem;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .executive-summary p {
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .executive-summary p:last-child {
+      margin-bottom: 0;
+    }
+
+    .key-points {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .key-point {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 16px;
+      border-radius: 8px;
+      border-left: 3px solid var(--accent-cyan);
+    }
+
+    .key-point strong {
+      color: var(--text-primary);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .key-point span {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    /* Sections */
+    section {
+      margin-bottom: 64px;
+    }
+
+    section h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    section h2 .section-icon {
+      font-size: 1.5rem;
+    }
+
+    section h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      margin: 32px 0 16px;
+    }
+
+    section h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 24px 0 12px;
+    }
+
+    p {
+      margin-bottom: 16px;
+      color: var(--text-secondary);
+    }
+
+    strong {
+      color: var(--text-primary);
+    }
+
+    /* Code blocks */
+    pre {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+      margin: 16px 0 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: var(--accent-green);
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+      color: var(--text-primary);
+    }
+
+    .code-comment {
+      color: var(--text-muted);
+    }
+
+    .code-keyword {
+      color: var(--accent-purple);
+    }
+
+    .code-string {
+      color: var(--accent-green);
+    }
+
+    .code-number {
+      color: var(--accent-orange);
+    }
+
+    .code-function {
+      color: var(--accent-cyan);
+    }
+
+    /* Diagrams */
+    .diagram {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      line-height: 1.4;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--text-secondary);
+    }
+
+    .diagram-caption {
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+      font-style: italic;
+    }
+
+    /* Lists */
+    ul, ol {
+      margin: 16px 0;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    li strong {
+      color: var(--accent-cyan);
+    }
+
+    /* Info boxes */
+    .info-box {
+      background: var(--bg-secondary);
+      border-left: 4px solid var(--accent-cyan);
+      padding: 16px 20px;
+      margin: 24px 0;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .info-box.warning {
+      border-left-color: var(--accent-orange);
+    }
+
+    .info-box.success {
+      border-left-color: var(--accent-green);
+    }
+
+    .info-box p {
+      margin: 0;
+    }
+
+    /* Math formulas */
+    .formula {
+      background: var(--bg-tertiary);
+      padding: 16px 24px;
+      border-radius: 8px;
+      margin: 16px 0;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      color: var(--accent-cyan);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 24px 0;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    td {
+      color: var(--text-secondary);
+    }
+
+    td code {
+      font-size: 0.85rem;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    footer a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2rem;
+      }
+
+      section h2 {
+        font-size: 1.4rem;
+      }
+
+      .key-points {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <nav>
+    <a href="/">← Volver a la simulación</a>
+    <span class="nav-title">Technical Documentation</span>
+  </nav>
+
+  <div class="container">
+    <header class="hero">
+      <h1>Neuro Drive</h1>
+      <p class="subtitle">Documentación Técnica Completa</p>
+      <div class="tech-stack">
+        <span class="tech-badge">TypeScript</span>
+        <span class="tech-badge">Neural Networks</span>
+        <span class="tech-badge">Genetic Algorithms</span>
+        <span class="tech-badge">Canvas 2D</span>
+        <span class="tech-badge">Vite</span>
+      </div>
+    </header>
+
+    <nav class="toc">
+      <h2>Tabla de Contenidos</h2>
+      <ul>
+        <li><a href="#executive-summary"><span class="section-num">00</span> Resumen Ejecutivo</a></li>
+        <li><a href="#architecture"><span class="section-num">01</span> Arquitectura del Sistema</a></li>
+        <li><a href="#neural-network"><span class="section-num">02</span> Red Neuronal</a></li>
+        <li><a href="#genetic-algorithm"><span class="section-num">03</span> Algoritmo Genético</a></li>
+        <li><a href="#sensor-system"><span class="section-num">04</span> Sistema de Sensores</a></li>
+        <li><a href="#physics"><span class="section-num">05</span> Física del Movimiento</a></li>
+        <li><a href="#fitness"><span class="section-num">06</span> Función de Fitness</a></li>
+        <li><a href="#traffic"><span class="section-num">07</span> Sistema de Tráfico</a></li>
+        <li><a href="#rendering"><span class="section-num">08</span> Renderizado</a></li>
+      </ul>
+    </nav>
+
+    <div class="executive-summary" id="executive-summary">
+      <h2>📋 Resumen Ejecutivo (No-Técnico)</h2>
+      <p>
+        <strong>Neuro Drive</strong> es una simulación de <strong>inteligencia artificial evolutiva</strong> donde 8 vehículos autónomos aprenden a conducir mediante un proceso inspirado en la selección natural de Darwin.
+      </p>
+      <p>
+        Cada vehículo posee un "cerebro" digital (red neuronal) que procesa información sensorial y toma decisiones de conducción. Los vehículos compiten entre sí, y el más exitoso transmite su configuración cerebral a la siguiente generación, con pequeñas variaciones aleatorias (mutaciones).
+      </p>
+      <p>
+        Con el tiempo, este proceso de <strong>selección + herencia + mutación</strong> produce vehículos cada vez más competentes, capaces de navegar obstáculos que inicialmente resultaban imposibles.
+      </p>
+
+      <div class="key-points">
+        <div class="key-point">
+          <strong>Tecnología Core</strong>
+          <span>Redes Neuronales Artificiales + Algoritmos Genéticos</span>
+        </div>
+        <div class="key-point">
+          <strong>Método de Aprendizaje</strong>
+          <span>Neuroevolución (evolución de pesos sinápticos)</span>
+        </div>
+        <div class="key-point">
+          <strong>Tiempo de Convergencia</strong>
+          <span>10-50 generaciones para comportamiento básico</span>
+        </div>
+        <div class="key-point">
+          <strong>Aplicación Real</strong>
+          <span>Base de sistemas de conducción autónoma</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 1: Architecture -->
+    <section id="architecture">
+      <h2><span class="section-icon">🏗️</span> Arquitectura del Sistema</h2>
+
+      <h3>Estructura de Archivos</h3>
+      <pre><code>src/
+├── main.ts        <span class="code-comment">// Game loop, generaciones, UI</span>
+├── car.ts         <span class="code-comment">// Clase Car: física, sensores, NN, logging</span>
+├── sensor.ts      <span class="code-comment">// Ray-casting para detección de obstáculos</span>
+├── network.ts     <span class="code-comment">// Implementación de red neuronal feedforward</span>
+├── road.ts        <span class="code-comment">// Geometría de carretera y bordes</span>
+├── visualizer.ts  <span class="code-comment">// Renderizado del grafo de la NN</span>
+└── style.css      <span class="code-comment">// Estilos del dashboard</span></code></pre>
+
+      <h3>Flujo de Datos Principal</h3>
+      <div class="diagram">
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           GAME LOOP (60 FPS)                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   ┌─────────┐    ┌──────────┐    ┌────────────┐    ┌──────────────┐   │
+│   │ Sensors │───▶│ Network  │───▶│  Controls  │───▶│   Physics    │   │
+│   │ (Input) │    │(Process) │    │  (Output)  │    │   (Update)   │   │
+│   └─────────┘    └──────────┘    └────────────┘    └──────────────┘   │
+│        │                                                    │          │
+│        │              ┌─────────────┐                       │          │
+│        └──────────────│  Collision  │◀──────────────────────┘          │
+│                       │  Detection  │                                   │
+│                       └──────┬──────┘                                   │
+│                              │                                          │
+│                              ▼                                          │
+│                       ┌─────────────┐                                   │
+│                       │   Fitness   │                                   │
+│                       │ Evaluation  │                                   │
+│                       └─────────────┘                                   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ (Cuando todos chocan)
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        GENETIC ALGORITHM                                │
+├─────────────────────────────────────────────────────────────────────────┤
+│   1. Seleccionar mejor individuo (max fitness)                         │
+│   2. Clonar cerebro a nueva generación                                 │
+│   3. Aplicar mutaciones aleatorias                                     │
+│   4. Reset posiciones y tráfico                                        │
+└─────────────────────────────────────────────────────────────────────────┘</div>
+
+      <h3>Ciclo de Vida de una Generación</h3>
+      <ol>
+        <li><strong>Inicialización:</strong> N coches nacen con copias mutadas del mejor cerebro anterior</li>
+        <li><strong>Simulación:</strong> Cada frame actualiza sensores → red neuronal → física</li>
+        <li><strong>Evaluación:</strong> Se calcula fitness continuo (distancia recorrida)</li>
+        <li><strong>Terminación:</strong> Cuando todos los coches colisionan</li>
+        <li><strong>Selección:</strong> El coche con mayor fitness es seleccionado</li>
+        <li><strong>Reproducción:</strong> Su cerebro se clona y muta para la siguiente generación</li>
+      </ol>
+    </section>
+
+    <!-- SECTION 2: Neural Network -->
+    <section id="neural-network">
+      <h2><span class="section-icon">🧠</span> Red Neuronal</h2>
+
+      <h3>Tipo de Red</h3>
+      <p>
+        <strong>Feedforward Neural Network</strong> (Perceptrón Multicapa) sin backpropagation.
+        Los pesos se optimizan mediante algoritmo genético, no mediante descenso de gradiente.
+      </p>
+
+      <h3>Arquitectura</h3>
+      <div class="diagram">
+INPUT LAYER          HIDDEN LAYER         OUTPUT LAYER
+(7 neurons)          (8 neurons)          (2 neurons)
+
+    S₀ ─────────────────┐
+    S₁ ─────────────────┤                     O₀ (Velocidad)
+    S₂ ─────────────────┼──▶  H₀ ──────┐
+    S₃ ─────────────────┼──▶  H₁ ──────┼──▶   │
+    S₄ ─────────────────┼──▶  H₂ ──────┼──▶   │
+    S₅ ─────────────────┼──▶  H₃ ──────┼──▶   O₁ (Dirección)
+    S₆ ─────────────────┼──▶  H₄ ──────┤
+                        ├──▶  H₅ ──────┤
+                        ├──▶  H₆ ──────┤
+                        └──▶  H₇ ──────┘
+
+S = Sensor readings (0-1)
+H = Hidden neurons (tanh activation)
+O = Output neurons (tanh activation)
+
+Total conexiones: (7×8) + (8×2) = 56 + 16 = 72 pesos
+Total biases: 8 + 2 = 10
+Total parámetros entrenables: 82</div>
+
+      <h3>Implementación del Feedforward</h3>
+      <pre><code><span class="code-keyword">static</span> <span class="code-function">feedForward</span>(givenInputs: <span class="code-keyword">number</span>[], network: Network): <span class="code-keyword">number</span>[] {
+  <span class="code-comment">// Asignar inputs a la primera capa</span>
+  <span class="code-keyword">let</span> outputs = <span class="code-function">Level.feedForward</span>(givenInputs, network.levels[<span class="code-number">0</span>]);
+
+  <span class="code-comment">// Propagar a través de capas ocultas</span>
+  <span class="code-keyword">for</span> (<span class="code-keyword">let</span> i = <span class="code-number">1</span>; i < network.levels.length; i++) {
+    outputs = <span class="code-function">Level.feedForward</span>(outputs, network.levels[i]);
+  }
+
+  <span class="code-keyword">return</span> outputs;
+}</code></pre>
+
+      <h3>Función de Activación: tanh</h3>
+      <p>
+        Se utiliza <strong>tangente hiperbólica (tanh)</strong> como función de activación por sus propiedades:
+      </p>
+
+      <div class="formula">
+        tanh(x) = (e^x - e^(-x)) / (e^x + e^(-x))
+      </div>
+
+      <ul>
+        <li><strong>Rango:</strong> (-1, 1) - ideal para outputs de dirección</li>
+        <li><strong>Centrada en cero:</strong> Facilita el aprendizaje</li>
+        <li><strong>Gradientes más fuertes:</strong> Comparado con sigmoid</li>
+        <li><strong>Suave y continua:</strong> Permite control proporcional</li>
+      </ul>
+
+      <pre><code><span class="code-comment">// En Level.feedForward()</span>
+<span class="code-keyword">for</span> (<span class="code-keyword">let</span> i = <span class="code-number">0</span>; i < level.outputs.length; i++) {
+  <span class="code-keyword">let</span> sum = level.biases[i];
+  <span class="code-keyword">for</span> (<span class="code-keyword">let</span> j = <span class="code-number">0</span>; j < level.inputs.length; j++) {
+    sum += level.inputs[j] * level.weights[j][i];
+  }
+  <span class="code-comment">// Activación tanh para outputs continuos</span>
+  level.outputs[i] = Math.<span class="code-function">tanh</span>(sum);
+}</code></pre>
+
+      <h3>Interpretación de Outputs</h3>
+      <table>
+        <tr>
+          <th>Output</th>
+          <th>Rango</th>
+          <th>Interpretación</th>
+        </tr>
+        <tr>
+          <td><code>outputs[0]</code></td>
+          <td>[-1, 1]</td>
+          <td>Modulador de velocidad máxima. Se mapea a rango [3.5, 5.5]</td>
+        </tr>
+        <tr>
+          <td><code>outputs[1]</code></td>
+          <td>[-1, 1]</td>
+          <td>Intensidad de giro. -1 = izquierda máxima, +1 = derecha máxima</td>
+        </tr>
+      </table>
+
+      <pre><code><span class="code-comment">// Mapeo de outputs a controles (car.ts)</span>
+<span class="code-keyword">const</span> accelIntensity = (outputs[<span class="code-number">0</span>] + <span class="code-number">1</span>) / <span class="code-number">4</span> + <span class="code-number">0.5</span>; <span class="code-comment">// [0.5, 1.0]</span>
+<span class="code-keyword">this</span>.maxSpeed = <span class="code-number">2</span> + accelIntensity * <span class="code-number">3</span>;              <span class="code-comment">// [3.5, 5.5]</span>
+<span class="code-keyword">this</span>.steeringIntensity = outputs[<span class="code-number">1</span>];                <span class="code-comment">// [-1, 1]</span></code></pre>
+    </section>
+
+    <!-- SECTION 3: Genetic Algorithm -->
+    <section id="genetic-algorithm">
+      <h2><span class="section-icon">🧬</span> Algoritmo Genético</h2>
+
+      <h3>Concepto</h3>
+      <p>
+        El sistema implementa un <strong>algoritmo genético (GA)</strong> simplificado para optimizar los pesos de la red neuronal. A diferencia de backpropagation, no requiere función de pérdida diferenciable ni cálculo de gradientes.
+      </p>
+
+      <h3>Componentes del GA</h3>
+
+      <h4>1. Representación del Genoma</h4>
+      <p>
+        El "genoma" de cada individuo es el conjunto completo de pesos y biases de su red neuronal, almacenado como un objeto JSON serializable:
+      </p>
+      <pre><code><span class="code-keyword">interface</span> Network {
+  levels: Level[];  <span class="code-comment">// Array de capas</span>
+}
+
+<span class="code-keyword">interface</span> Level {
+  inputs: <span class="code-keyword">number</span>[];
+  outputs: <span class="code-keyword">number</span>[];
+  biases: <span class="code-keyword">number</span>[];     <span class="code-comment">// Sesgos por neurona</span>
+  weights: <span class="code-keyword">number</span>[][]; <span class="code-comment">// Matriz de pesos</span>
+}</code></pre>
+
+      <h4>2. Selección (Elitismo Puro)</h4>
+      <p>
+        Se utiliza <strong>selección elitista</strong>: solo el mejor individuo (mayor fitness) se reproduce. Esto garantiza convergencia pero puede llevar a óptimos locales.
+      </p>
+      <pre><code><span class="code-comment">// Selección del mejor (main.ts)</span>
+<span class="code-keyword">const</span> sortedCars = [...cars].<span class="code-function">sort</span>((a, b) => b.fitness - a.fitness);
+bestCar = sortedCars[<span class="code-number">0</span>];</code></pre>
+
+      <h4>3. Mutación</h4>
+      <p>
+        Cada peso tiene probabilidad <code>mutationRate</code> de ser modificado mediante interpolación lineal hacia un valor aleatorio:
+      </p>
+
+      <div class="formula">
+        w' = lerp(w, random(-1, 1), mutationRate)
+      </div>
+
+      <pre><code><span class="code-keyword">static</span> <span class="code-function">mutate</span>(network: Network, amount: <span class="code-keyword">number</span> = <span class="code-number">0.1</span>) {
+  network.levels.<span class="code-function">forEach</span>(level => {
+    <span class="code-comment">// Mutar biases</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">let</span> i = <span class="code-number">0</span>; i < level.biases.length; i++) {
+      level.biases[i] = <span class="code-function">lerp</span>(
+        level.biases[i],
+        Math.<span class="code-function">random</span>() * <span class="code-number">2</span> - <span class="code-number">1</span>,  <span class="code-comment">// Valor aleatorio [-1, 1]</span>
+        amount
+      );
+    }
+    <span class="code-comment">// Mutar pesos (mismo proceso)</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">let</span> i = <span class="code-number">0</span>; i < level.weights.length; i++) {
+      <span class="code-keyword">for</span> (<span class="code-keyword">let</span> j = <span class="code-number">0</span>; j < level.weights[i].length; j++) {
+        level.weights[i][j] = <span class="code-function">lerp</span>(
+          level.weights[i][j],
+          Math.<span class="code-function">random</span>() * <span class="code-number">2</span> - <span class="code-number">1</span>,
+          amount
+        );
+      }
+    }
+  });
+}</code></pre>
+
+      <h4>4. Variación de Tasa de Mutación</h4>
+      <p>
+        Para balancear <strong>exploración vs explotación</strong>, se aplican diferentes tasas:
+      </p>
+      <pre><code><span class="code-comment">// 30% de la población: mutación conservadora (explotar)</span>
+<span class="code-keyword">if</span> (i < N * <span class="code-number">0.3</span>) {
+  variableMutation = mutationRate * <span class="code-number">0.5</span>;
+}
+<span class="code-comment">// 70% restante: mutación agresiva (explorar)</span>
+<span class="code-keyword">else</span> {
+  variableMutation = mutationRate * (<span class="code-number">1</span> + Math.<span class="code-function">random</span>());
+}</code></pre>
+
+      <div class="info-box">
+        <p><strong>Trade-off Exploración/Explotación:</strong> Mutación alta explora más soluciones pero puede perder buenas configuraciones. Mutación baja refina soluciones existentes pero puede estancarse en óptimos locales.</p>
+      </div>
+    </section>
+
+    <!-- SECTION 4: Sensor System -->
+    <section id="sensor-system">
+      <h2><span class="section-icon">👁️</span> Sistema de Sensores</h2>
+
+      <h3>Técnica: Ray Casting</h3>
+      <p>
+        Cada vehículo proyecta <strong>7 rayos</strong> desde su posición frontal. Los rayos detectan intersecciones con obstáculos (bordes de carretera y otros vehículos).
+      </p>
+
+      <div class="diagram">
+                          Ray 0 (↑)
+                            │
+                    Ray 1   │   Ray 6
+                      ╲     │     ╱
+               Ray 2   ╲    │    ╱   Ray 5
+                  ╲     ╲   │   ╱     ╱
+                   ╲     ╲  │  ╱     ╱
+                    ╲     ╲ │ ╱     ╱
+                     ╲     ╲│╱     ╱
+              Ray 3 ──────[CAR]────── Ray 4
+
+Spread angle: π/2 (90°)
+Ray count: 7
+Ray length: 150 units</div>
+
+      <h3>Cálculo de Intersección</h3>
+      <p>
+        Se utiliza el algoritmo de <strong>intersección de segmentos de línea</strong> basado en ecuaciones paramétricas:
+      </p>
+
+      <pre><code><span class="code-function">#getIntersection</span>(A, B, C, D) {
+  <span class="code-comment">// Línea 1: P = A + t(B-A), t ∈ [0,1]</span>
+  <span class="code-comment">// Línea 2: P = C + u(D-C), u ∈ [0,1]</span>
+
+  <span class="code-keyword">const</span> tTop = (D.x - C.x) * (A.y - C.y) - (D.y - C.y) * (A.x - C.x);
+  <span class="code-keyword">const</span> uTop = (C.y - A.y) * (A.x - B.x) - (C.x - A.x) * (A.y - B.y);
+  <span class="code-keyword">const</span> bottom = (D.y - C.y) * (B.x - A.x) - (D.x - C.x) * (B.y - A.y);
+
+  <span class="code-keyword">if</span> (bottom != <span class="code-number">0</span>) {
+    <span class="code-keyword">const</span> t = tTop / bottom;
+    <span class="code-keyword">const</span> u = uTop / bottom;
+
+    <span class="code-comment">// Intersección válida si ambos parámetros están en [0,1]</span>
+    <span class="code-keyword">if</span> (t >= <span class="code-number">0</span> && t <= <span class="code-number">1</span> && u >= <span class="code-number">0</span> && u <= <span class="code-number">1</span>) {
+      <span class="code-keyword">return</span> {
+        x: A.x + (B.x - A.x) * t,
+        y: A.y + (B.y - A.y) * t,
+        offset: t  <span class="code-comment">// Distancia normalizada [0,1]</span>
+      };
+    }
+  }
+  <span class="code-keyword">return null</span>;
+}</code></pre>
+
+      <h3>Normalización de Lecturas</h3>
+      <p>
+        Las lecturas de sensores se normalizan para la red neuronal:
+      </p>
+      <pre><code><span class="code-comment">// offset = 0 → obstáculo en el origen del rayo (imposible)</span>
+<span class="code-comment">// offset = 1 → obstáculo al final del rayo (lejos)</span>
+<span class="code-comment">// offset = null → sin obstáculo detectado</span>
+
+sensorOffsets = <span class="code-keyword">this</span>.sensor.readings.<span class="code-function">map</span>(reading =>
+  reading == <span class="code-keyword">null</span> ? <span class="code-number">0</span> : <span class="code-number">1</span> - reading.offset
+);
+
+<span class="code-comment">// Resultado: 0 = sin obstáculo, 1 = obstáculo muy cerca</span></code></pre>
+
+      <table>
+        <tr>
+          <th>Valor Sensor</th>
+          <th>Significado</th>
+          <th>Input a NN</th>
+        </tr>
+        <tr>
+          <td><code>null</code></td>
+          <td>Sin obstáculo en rango</td>
+          <td>0</td>
+        </tr>
+        <tr>
+          <td><code>offset: 0.9</code></td>
+          <td>Obstáculo lejos</td>
+          <td>0.1</td>
+        </tr>
+        <tr>
+          <td><code>offset: 0.1</code></td>
+          <td>Obstáculo muy cerca</td>
+          <td>0.9</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- SECTION 5: Physics -->
+    <section id="physics">
+      <h2><span class="section-icon">⚙️</span> Física del Movimiento</h2>
+
+      <h3>Modelo de Vehículo</h3>
+      <p>
+        Se utiliza un modelo simplificado de <strong>cinemática 2D</strong> con las siguientes propiedades:
+      </p>
+
+      <table>
+        <tr>
+          <th>Propiedad</th>
+          <th>Valor</th>
+          <th>Descripción</th>
+        </tr>
+        <tr>
+          <td><code>acceleration</code></td>
+          <td>0.2</td>
+          <td>Incremento de velocidad por frame al acelerar</td>
+        </tr>
+        <tr>
+          <td><code>maxSpeed</code></td>
+          <td>3.5 - 5.5</td>
+          <td>Velocidad máxima (modulada por NN)</td>
+        </tr>
+        <tr>
+          <td><code>friction</code></td>
+          <td>0.05</td>
+          <td>Decremento de velocidad por frame</td>
+        </tr>
+        <tr>
+          <td><code>turnRate</code></td>
+          <td>0.04 rad</td>
+          <td>Velocidad angular máxima por frame</td>
+        </tr>
+      </table>
+
+      <h3>Ecuaciones de Movimiento</h3>
+      <pre><code><span class="code-function">#move</span>() {
+  <span class="code-comment">// Aceleración</span>
+  <span class="code-keyword">if</span> (<span class="code-keyword">this</span>.controls.forward) <span class="code-keyword">this</span>.speed += <span class="code-keyword">this</span>.acceleration;
+  <span class="code-keyword">if</span> (<span class="code-keyword">this</span>.controls.reverse) <span class="code-keyword">this</span>.speed -= <span class="code-keyword">this</span>.acceleration;
+
+  <span class="code-comment">// Límites de velocidad</span>
+  <span class="code-keyword">if</span> (<span class="code-keyword">this</span>.speed > <span class="code-keyword">this</span>.maxSpeed) <span class="code-keyword">this</span>.speed = <span class="code-keyword">this</span>.maxSpeed;
+  <span class="code-keyword">if</span> (<span class="code-keyword">this</span>.speed < -<span class="code-keyword">this</span>.maxSpeed / <span class="code-number">2</span>) <span class="code-keyword">this</span>.speed = -<span class="code-keyword">this</span>.maxSpeed / <span class="code-number">2</span>;
+
+  <span class="code-comment">// Fricción (drag)</span>
+  <span class="code-keyword">if</span> (<span class="code-keyword">this</span>.speed > <span class="code-number">0</span>) <span class="code-keyword">this</span>.speed -= <span class="code-keyword">this</span>.friction;
+  <span class="code-keyword">if</span> (<span class="code-keyword">this</span>.speed < <span class="code-number">0</span>) <span class="code-keyword">this</span>.speed += <span class="code-keyword">this</span>.friction;
+  <span class="code-keyword">if</span> (Math.<span class="code-function">abs</span>(<span class="code-keyword">this</span>.speed) < <span class="code-keyword">this</span>.friction) <span class="code-keyword">this</span>.speed = <span class="code-number">0</span>;
+
+  <span class="code-comment">// Giro (solo si hay velocidad)</span>
+  <span class="code-keyword">if</span> (<span class="code-keyword">this</span>.speed != <span class="code-number">0</span>) {
+    <span class="code-keyword">const</span> flip = <span class="code-keyword">this</span>.speed > <span class="code-number">0</span> ? <span class="code-number">1</span> : -<span class="code-number">1</span>;
+    <span class="code-keyword">this</span>.angle -= <span class="code-keyword">this</span>.steeringIntensity * <span class="code-number">0.04</span> * flip;
+  }
+
+  <span class="code-comment">// Actualización de posición</span>
+  <span class="code-keyword">this</span>.x -= Math.<span class="code-function">sin</span>(<span class="code-keyword">this</span>.angle) * <span class="code-keyword">this</span>.speed;
+  <span class="code-keyword">this</span>.y -= Math.<span class="code-function">cos</span>(<span class="code-keyword">this</span>.angle) * <span class="code-keyword">this</span>.speed;
+}</code></pre>
+
+      <h3>Sistema de Coordenadas</h3>
+      <div class="diagram">
+        (0,0) ────────────────▶ X+
+          │
+          │      ┌───┐
+          │      │ ▲ │  angle = 0 (hacia arriba)
+          │      │   │
+          │      └───┘
+          │
+          ▼
+         Y+
+
+Nota: Y aumenta hacia ABAJO (convención Canvas)
+      La IA avanza reduciendo Y (hacia arriba)</div>
+
+      <h3>Detección de Colisiones</h3>
+      <p>
+        Se utiliza <strong>Separating Axis Theorem (SAT)</strong> simplificado mediante verificación de intersección de polígonos:
+      </p>
+      <pre><code><span class="code-function">#polysIntersect</span>(poly1, poly2) {
+  <span class="code-keyword">for</span> (<span class="code-keyword">let</span> i = <span class="code-number">0</span>; i < poly1.length; i++) {
+    <span class="code-keyword">for</span> (<span class="code-keyword">let</span> j = <span class="code-number">0</span>; j < poly2.length - <span class="code-number">1</span>; j++) {
+      <span class="code-keyword">const</span> touch = <span class="code-keyword">this</span>.<span class="code-function">#getIntersection</span>(
+        poly1[i], poly1[(i + <span class="code-number">1</span>) % poly1.length],
+        poly2[j], poly2[j + <span class="code-number">1</span>]
+      );
+      <span class="code-keyword">if</span> (touch) <span class="code-keyword">return true</span>;
+    }
+  }
+  <span class="code-keyword">return false</span>;
+}</code></pre>
+    </section>
+
+    <!-- SECTION 6: Fitness -->
+    <section id="fitness">
+      <h2><span class="section-icon">📊</span> Función de Fitness</h2>
+
+      <h3>Definición</h3>
+      <p>
+        La función de fitness determina qué tan "bueno" es un individuo. En Neuro Drive, se utiliza una métrica simple pero efectiva:
+      </p>
+
+      <div class="formula">
+        fitness = 100 - Y
+      </div>
+
+      <p>
+        Donde <code>Y</code> es la coordenada vertical del vehículo. Como Y disminuye al avanzar (sistema de coordenadas Canvas), mayor distancia recorrida = mayor fitness.
+      </p>
+
+      <h3>Justificación del Diseño</h3>
+      <ul>
+        <li><strong>Simplicidad:</strong> Una métrica simple evita que la IA encuentre "exploits"</li>
+        <li><strong>Monotonicidad:</strong> Siempre recompensa avanzar más lejos</li>
+        <li><strong>Sin penalizaciones artificiales:</strong> Solo la colisión termina la carrera</li>
+      </ul>
+
+      <div class="info-box success">
+        <p><strong>Diseño anterior (descartado):</strong> Se probó un sistema que requería adelantar coches y penalizaba estancamiento. La IA encontró "exploits" como ir lento junto al tráfico. La solución fue simplificar a solo distancia.</p>
+      </div>
+
+      <h3>Métricas Adicionales (Logging)</h3>
+      <pre><code><span class="code-keyword">interface</span> DecisionLog {
+  frame: <span class="code-keyword">number</span>;
+  position: { x: <span class="code-keyword">number</span>; y: <span class="code-keyword">number</span> };
+  speed: <span class="code-keyword">number</span>;
+  angle: <span class="code-keyword">number</span>;
+  lane: <span class="code-keyword">number</span>;               <span class="code-comment">// Carril estimado (0, 1, 2)</span>
+  sensors: <span class="code-keyword">number</span>[];          <span class="code-comment">// Lecturas de sensores</span>
+  outputs: <span class="code-keyword">number</span>[];          <span class="code-comment">// Salidas de la NN</span>
+  event?: <span class="code-string">"OVERTAKE"</span> | <span class="code-string">"COLLISION"</span>;
+  overtakeCount: <span class="code-keyword">number</span>;
+  distanceTraveled: <span class="code-keyword">number</span>;
+}</code></pre>
+    </section>
+
+    <!-- SECTION 7: Traffic -->
+    <section id="traffic">
+      <h2><span class="section-icon">🚗</span> Sistema de Tráfico</h2>
+
+      <h3>Generación Procedural</h3>
+      <p>
+        El tráfico se genera de forma procedural con <strong>dificultad progresiva</strong>:
+      </p>
+
+      <pre><code><span class="code-function">createTraffic</span>() {
+  <span class="code-keyword">for</span> (<span class="code-keyword">let</span> row = <span class="code-number">0</span>; row < <span class="code-number">40</span>; row++) {
+    <span class="code-keyword">const</span> y = -<span class="code-number">300</span> - (row * <span class="code-number">120</span>); <span class="code-comment">// 120 unidades entre filas</span>
+
+    <span class="code-keyword">let</span> openLane;
+    <span class="code-keyword">if</span> (row < <span class="code-number">3</span>) {
+      <span class="code-comment">// Primeras 3 filas: carril central SIEMPRE abierto</span>
+      openLane = <span class="code-number">1</span>;
+    } <span class="code-keyword">else if</span> (row < <span class="code-number">8</span>) {
+      <span class="code-comment">// Filas 3-7: centro O adyacente (transición)</span>
+      openLane = Math.<span class="code-function">random</span>() < <span class="code-number">0.5</span> ? <span class="code-number">1</span> : (Math.<span class="code-function">random</span>() < <span class="code-number">0.5</span> ? <span class="code-number">0</span> : <span class="code-number">2</span>);
+    } <span class="code-keyword">else</span> {
+      <span class="code-comment">// Resto: completamente aleatorio (desafío real)</span>
+      openLane = Math.<span class="code-function">floor</span>(Math.<span class="code-function">random</span>() * <span class="code-number">3</span>);
+    }
+
+    <span class="code-comment">// Bloquear 2 de 3 carriles con obstáculos</span>
+    <span class="code-keyword">for</span> (<span class="code-keyword">let</span> lane = <span class="code-number">0</span>; lane < <span class="code-number">3</span>; lane++) {
+      <span class="code-keyword">if</span> (lane !== openLane) {
+        traffic.<span class="code-function">push</span>(<span class="code-keyword">new</span> <span class="code-function">Car</span>(getLaneCenter(lane), y, <span class="code-number">30</span>, <span class="code-number">50</span>, <span class="code-string">"DUMMY"</span>, <span class="code-number">2</span>));
+      }
+    }
+  }
+}</code></pre>
+
+      <h3>Tráfico Infinito</h3>
+      <p>
+        El tráfico se genera dinámicamente a medida que el líder avanza:
+      </p>
+      <pre><code><span class="code-function">updateTraffic</span>(leaderY) {
+  <span class="code-keyword">const</span> spawnThreshold = furthestY - <span class="code-number">2000</span>;
+
+  <span class="code-keyword">if</span> (leaderY < spawnThreshold) {
+    <span class="code-comment">// Generar más filas de tráfico adelante</span>
+    <span class="code-keyword">const</span> rowsToAdd = Math.<span class="code-function">ceil</span>((spawnThreshold - leaderY) / <span class="code-number">120</span>);
+    <span class="code-comment">// ... spawn logic ...</span>
+  }
+
+  <span class="code-comment">// Cleanup: remover tráfico muy atrás</span>
+  traffic = traffic.<span class="code-function">filter</span>(car => car.y < leaderY + <span class="code-number">500</span>);
+}</code></pre>
+
+      <div class="diagram">
+Estructura del tráfico (vista superior):
+
+     Carril 0    Carril 1    Carril 2
+        │           │           │
+Fila 0  ■           ·           ■      ← Centro abierto
+Fila 1  ■           ·           ■      ← Centro abierto
+Fila 2  ■           ·           ■      ← Centro abierto
+Fila 3  ·           ■           ■      ← Izquierda abierta (aleatorio)
+Fila 4  ■           ■           ·      ← Derecha abierta (aleatorio)
+  ...
+Fila N  ?           ?           ?      ← Completamente aleatorio
+
+■ = Obstáculo (coche DUMMY)
+· = Carril libre</div>
+    </section>
+
+    <!-- SECTION 8: Rendering -->
+    <section id="rendering">
+      <h2><span class="section-icon">🎨</span> Renderizado</h2>
+
+      <h3>Canvas 2D</h3>
+      <p>
+        El renderizado utiliza la API <strong>Canvas 2D</strong> nativa del navegador, optimizada para el caso de uso:
+      </p>
+
+      <ul>
+        <li><strong>Double buffering:</strong> El canvas se limpia completamente cada frame</li>
+        <li><strong>Transformaciones:</strong> Se usa <code>translate()</code> para seguir la cámara</li>
+        <li><strong>Efectos:</strong> <code>shadowBlur</code> para el glow del líder</li>
+      </ul>
+
+      <h3>Cámara Suave</h3>
+      <pre><code><span class="code-comment">// Interpolación lineal para movimiento suave</span>
+<span class="code-keyword">const</span> CAMERA_SMOOTHNESS = <span class="code-number">0.05</span>;
+cameraY = <span class="code-function">lerp</span>(cameraY, targetCameraY, CAMERA_SMOOTHNESS);
+
+<span class="code-comment">// Aplicar transformación de cámara</span>
+carCtx.<span class="code-function">save</span>();
+carCtx.<span class="code-function">translate</span>(<span class="code-number">0</span>, -cameraY + carCanvas.height * <span class="code-number">0.7</span>);
+<span class="code-comment">// ... render scene ...</span>
+carCtx.<span class="code-function">restore</span>();</code></pre>
+
+      <h3>Visualizador de Red Neuronal</h3>
+      <p>
+        El visualizador muestra en tiempo real el estado de la red neuronal del líder:
+      </p>
+      <ul>
+        <li><strong>Nodos:</strong> Círculos coloreados según nivel de activación</li>
+        <li><strong>Conexiones:</strong> Líneas cuyo grosor y color representan el peso</li>
+        <li><strong>Animación:</strong> Líneas discontinuas animadas con <code>lineDashOffset</code></li>
+      </ul>
+
+      <pre><code><span class="code-comment">// Animación de conexiones (main.ts)</span>
+networkCtx.lineDashOffset = -time / <span class="code-number">50</span>;</code></pre>
+    </section>
+
+    <footer>
+      <p>
+        <strong>Neuro Drive</strong> - Desarrollado como experimento de neuroevolución
+        <br>
+        <a href="/">← Volver a la simulación</a>
+      </p>
+    </footer>
+  </div>
+</body>
+
+</html>
