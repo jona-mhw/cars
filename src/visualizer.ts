@@ -34,7 +34,7 @@ export class Visualizer {
                 left, levelTop,
                 width, levelHeight,
                 i == network.levels.length - 1
-                    ? ['\u2191', '\u2190', '\u2192', '\u2193']
+                    ? ['\u2191', '\u2194'] // ↑ = velocidad, ↔ = giro
                     : []
             );
         }

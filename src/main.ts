@@ -10,8 +10,6 @@ const carCtx = carCanvas.getContext("2d")!;
 const networkCanvas = document.getElementById("networkCanvas") as HTMLCanvasElement;
 const networkCtx = networkCanvas.getContext("2d")!;
 
-const mutationRateSlider = document.getElementById("mutationRate") as HTMLInputElement;
-const mutationValLabel = document.getElementById("mutationVal") as HTMLSpanElement;
 const genLabel = document.getElementById("generationCount") as HTMLSpanElement;
 const aliveLabel = document.getElementById("aliveCount") as HTMLSpanElement;
 const fitnessLabel = document.getElementById("bestFitness") as HTMLSpanElement;
@@ -119,12 +117,11 @@ const TRAFFIC_SPAWN_DISTANCE = 120; // Distance between traffic rows
 function createTraffic(): Car[] {
   const cars: Car[] = [];
 
-  // AI starts in lane 1 (center) at Y=100
-  // First traffic must give AI time to react and learn
-
   for (let row = 0; row < 40; row++) {
-    // Start traffic further away (Y=-300) to give AI reaction time
-    const y = -300 - (row * TRAFFIC_SPAWN_DISTANCE);
+    const baseY = -300 - (row * TRAFFIC_SPAWN_DISTANCE);
+    // Variación en Y para que no estén en filas perfectas
+    const yOffset = (Math.random() - 0.5) * 40;
+    const y = baseY + yOffset;
 
     let openLane: number;
 
@@ -139,11 +136,45 @@ function createTraffic(): Car[] {
       openLane = Math.floor(Math.random() * 3);
     }
 
-    // Fill the other two lanes with traffic
+    // Fill the other two lanes with traffic (autos naranjas normales)
     for (let lane = 0; lane < 3; lane++) {
       if (lane !== openLane) {
-        cars.push(new Car(road.getLaneCenter(lane), y, 30, 50, "DUMMY", TRAFFIC_SPEED));
+        // Variación en X para posición más aleatoria dentro del carril
+        const xOffset = (Math.random() - 0.5) * 25;
+        const x = road.getLaneCenter(lane) + xOffset;
+        const car = new Car(x, y, 30, 50, "DUMMY", TRAFFIC_SPEED);
+        car.obstacleType = 'car';
+        cars.push(car);
       }
+    }
+
+    // Barrera gris (camión/muro móvil) - cada 7 filas después de fila 10
+    if (row > 10 && row % 7 === 0) {
+      const barrierLane = Math.floor(Math.random() * 3);
+      const xOffset = (Math.random() - 0.5) * 15;
+      const barrier = new Car(
+        road.getLaneCenter(barrierLane) + xOffset,
+        baseY - 60,
+        40, 90, // Más ancho y alto
+        "DUMMY",
+        TRAFFIC_SPEED * 0.8 // Un poco más lento
+      );
+      barrier.obstacleType = 'barrier';
+      cars.push(barrier);
+    }
+
+    // Zona roja (vehículo ancho/peligro) - cada 11 filas después de fila 15
+    if (row > 15 && row % 11 === 0) {
+      const dangerLane = Math.random() < 0.5 ? 0.5 : 1.5; // Entre carriles
+      const danger = new Car(
+        road.getLaneCenter(Math.floor(dangerLane)) + 25,
+        baseY - 30,
+        90, 25, // Ancho y bajo (horizontal)
+        "DUMMY",
+        TRAFFIC_SPEED * 0.6 // Más lento
+      );
+      danger.obstacleType = 'danger';
+      cars.push(danger);
     }
   }
 
@@ -154,23 +185,61 @@ function createTraffic(): Car[] {
 let furthestY = 0;
 let traffic = createTraffic();
 
+// Contador para generar obstáculos especiales
+let spawnedRows = 40; // Empezamos donde terminó createTraffic
+
 // Spawn more traffic as the leader advances (infinite road)
 function updateTraffic(leaderY: number) {
-  // If leader has advanced significantly, spawn more traffic ahead
-  const spawnThreshold = furthestY - 2000; // Spawn when within 2000 units
+  const spawnThreshold = furthestY - 2000;
 
   if (leaderY < spawnThreshold) {
-    // Calculate how many new rows to add
     const rowsToAdd = Math.ceil((spawnThreshold - leaderY) / TRAFFIC_SPAWN_DISTANCE);
 
     for (let i = 0; i < rowsToAdd; i++) {
       furthestY -= TRAFFIC_SPAWN_DISTANCE;
+      spawnedRows++;
+
+      const yOffset = (Math.random() - 0.5) * 40;
+      const y = furthestY + yOffset;
       const openLane = Math.floor(Math.random() * 3);
 
+      // Autos normales con posición X aleatoria
       for (let lane = 0; lane < 3; lane++) {
         if (lane !== openLane) {
-          traffic.push(new Car(road.getLaneCenter(lane), furthestY, 30, 50, "DUMMY", TRAFFIC_SPEED));
+          const xOffset = (Math.random() - 0.5) * 25;
+          const car = new Car(road.getLaneCenter(lane) + xOffset, y, 30, 50, "DUMMY", TRAFFIC_SPEED);
+          car.obstacleType = 'car';
+          traffic.push(car);
         }
+      }
+
+      // Barrera gris cada 7 filas
+      if (spawnedRows % 7 === 0) {
+        const barrierLane = Math.floor(Math.random() * 3);
+        const xOffset = (Math.random() - 0.5) * 15;
+        const barrier = new Car(
+          road.getLaneCenter(barrierLane) + xOffset,
+          furthestY - 60,
+          40, 90,
+          "DUMMY",
+          TRAFFIC_SPEED * 0.8
+        );
+        barrier.obstacleType = 'barrier';
+        traffic.push(barrier);
+      }
+
+      // Zona roja cada 11 filas
+      if (spawnedRows % 11 === 0) {
+        const dangerLane = Math.random() < 0.5 ? 0.5 : 1.5;
+        const danger = new Car(
+          road.getLaneCenter(Math.floor(dangerLane)) + 25,
+          furthestY - 30,
+          90, 25,
+          "DUMMY",
+          TRAFFIC_SPEED * 0.6
+        );
+        danger.obstacleType = 'danger';
+        traffic.push(danger);
       }
     }
   }
@@ -217,10 +286,6 @@ function generateCars(N: number) {
   return cars;
 }
 
-function save() {
-  localStorage.setItem("bestBrain", JSON.stringify(bestCar.brain));
-}
-
 function discard() {
   localStorage.removeItem("bestBrain");
   // Reset live feed tracking
@@ -229,12 +294,7 @@ function discard() {
   location.reload();
 }
 
-document.getElementById("saveBest")?.addEventListener("click", save);
 document.getElementById("discardBrain")?.addEventListener("click", discard);
-
-mutationRateSlider.addEventListener("input", (e) => {
-  mutationValLabel.innerText = (e.target as HTMLInputElement).value;
-});
 
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
@@ -417,15 +477,15 @@ function nextGeneration() {
   generation++;
 
   const nextCars = generateCars(N);
-  const mutationRate = parseFloat(mutationRateSlider.value);
+  const baseMutationRate = 0.15; // Tasa de mutación fija
 
   // Seed new cars with best car's brain
   for (let i = 0; i < nextCars.length; i++) {
     if (bestCar.brain) {
       nextCars[i].brain = JSON.parse(JSON.stringify(bestCar.brain));
       if (i != 0 && nextCars[i].brain) {
-        // Variable mutation: some with small changes, some with big changes
-        const variableMutation = i < N * 0.3 ? mutationRate * 0.5 : mutationRate * (1 + Math.random());
+        // Variable mutation: algunos con cambios pequeños, otros con cambios grandes
+        const variableMutation = i < N * 0.3 ? baseMutationRate * 0.5 : baseMutationRate * (1 + Math.random());
         Network.mutate(nextCars[i].brain!, variableMutation);
       }
     }
@@ -439,6 +499,7 @@ function nextGeneration() {
 
   // Reset traffic system for new generation
   furthestY = 0;
+  spawnedRows = 40;
   traffic = createTraffic();
 }
 
@@ -512,21 +573,5 @@ function updateBehaviorAnalysis(summary: GenerationSummary) {
 
   behaviorAnalysis.textContent = analysis || 'Recopilando datos...';
 }
-
-// ============================================================
-// EXPORT LOGS: Download AI learning data for analysis
-// ============================================================
-function exportLogs() {
-  const data = AILearningLog.exportToJSON();
-  const blob = new Blob([data], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `ai-learning-log-gen${generation}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-document.getElementById("exportLogs")?.addEventListener("click", exportLogs);
 
 animate();
