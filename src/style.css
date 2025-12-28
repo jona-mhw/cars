@@ -983,3 +983,139 @@ input[type="range"]::-webkit-slider-thumb {
   padding: 2px 6px;
   font-family: inherit;
 }
+
+/* ============================================
+   LEARNING MODE SELECTOR
+   ============================================ */
+.learning-mode-selector {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 2px;
+}
+
+.mode-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mode-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.mode-indicator {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-success);
+  padding: 2px 8px;
+  background: rgba(74, 222, 128, 0.15);
+  border-radius: 4px;
+}
+
+.mode-buttons {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.mode-btn:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-default);
+}
+
+.mode-btn.active {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.mode-btn.active:first-child {
+  background: rgba(74, 222, 128, 0.1);
+  border-color: var(--accent-success);
+  color: var(--accent-success);
+}
+
+.mode-btn.active:last-child {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: #a855f7;
+  color: #c084fc;
+}
+
+.mode-icon {
+  font-size: 1.2rem;
+}
+
+.mode-description {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ============================================
+   Q-LEARNING STATS
+   ============================================ */
+.ql-stats {
+  background: rgba(168, 85, 247, 0.08);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 2px;
+}
+
+.ql-stat-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.ql-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.ql-label {
+  font-size: 0.65rem;
+  color: #c084fc;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.ql-value {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #a855f7;
+}
+
+.ql-hint {
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+}

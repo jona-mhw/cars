@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto-Aprendizaje: IA Conducción</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+  <script type="module" crossorigin src="/assets/index-CO2zlBEL.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-Ct3ycorh.css">
+</head>
+
+<body>
+  <div id="app">
+    <div class="dashboard">
+      <div class="header-row">
+        <h1>NEURO DRIVE</h1>
+        <div class="header-right">
+          <span id="fpsCounter" class="fps-badge">60</span>
+          <a href="/how-this-works.html" class="docs-link" title="Documentación técnica">
+            <span>?</span>
+          </a>
+        </div>
+      </div>
+      <p class="subtitle">IA aprendiendo a conducir en tiempo real</p>
+
+      <div class="legend">
+        <div class="legend-title">Colores</div>
+        <div class="legend-item"><span class="dot cyan"></span> IA</div>
+        <div class="legend-item"><span class="dot cyan-bright"></span> Líder</div>
+        <div class="legend-item"><span class="dot orange"></span> Tráfico</div>
+        <div class="legend-item"><span class="dot gray"></span> Chocado</div>
+      </div>
+
+      <div class="learning-mode-selector">
+        <div class="mode-header">
+          <span class="mode-label">Modo de Aprendizaje</span>
+          <span id="learningModeLabel" class="mode-indicator">Neuroevolución</span>
+        </div>
+        <div class="mode-buttons">
+          <button id="modeGenetic" class="mode-btn active" title="Algoritmo Genético + Red Neuronal">
+            <span class="mode-icon">🧬</span>
+            <span>Neuroevolución</span>
+          </button>
+          <button id="modeQL" class="mode-btn" title="Deep Q-Learning con Experience Replay">
+            <span class="mode-icon">🧠</span>
+            <span>Q-Learning</span>
+          </button>
+        </div>
+        <div class="mode-description" id="modeDescription">
+          Evolución de redes neuronales mediante selección natural
+        </div>
+      </div>
+
+      <div id="qlStats" class="ql-stats" style="display: none;">
+        <div class="ql-stat-row">
+          <div class="ql-stat">
+            <span class="ql-label">Exploración (ε)</span>
+            <span id="explorationRate" class="ql-value">100%</span>
+          </div>
+          <div class="ql-stat">
+            <span class="ql-label">Episodios</span>
+            <span id="episodeCount" class="ql-value">0</span>
+          </div>
+        </div>
+        <div class="ql-hint">ε-greedy: explora mucho al inicio, después explota lo aprendido</div>
+      </div>
+
+      <div class="info-box">
+        <strong>¿Qué está pasando?</strong>
+        <p id="infoText">8 coches con IA compiten. El que llegue más lejos pasa su cerebro (con mutaciones) a la siguiente generación.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Generación</div>
+          <div id="generationCount" class="stat-value">1</div>
+        </div>
+        <div class="stat-card" style="background: rgba(0,255,100,0.1); border-left-color: #00ff88;">
+          <div class="stat-label">Distancia</div>
+          <div id="bestFitness" class="stat-value">0 m</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Adelantados</div>
+          <div id="overtakeCount" class="stat-value">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Vivos</div>
+          <div id="aliveCount" class="stat-value">0 / -</div>
+        </div>
+      </div>
+
+      <div id="statusBar" class="status-bar status-racing">
+        <span class="status-dot"></span>
+        <span id="deathReason">En carrera...</span>
+      </div>
+
+      <div class="network-container">
+        <div class="stat-label" style="margin-bottom: 5px;">🧠 Cerebro del Líder</div>
+        <canvas id="networkCanvas"></canvas>
+        <p class="network-hint">Abajo: sensores | Arriba: velocidad y giro</p>
+      </div>
+
+      <div class="controls">
+        <div class="speed-control">
+          <div class="speed-header">
+            <span class="speed-label">Velocidad</span>
+            <span id="speedIndicator" class="speed-indicator">Tiempo Real</span>
+          </div>
+          <div class="speed-buttons">
+            <button class="speed-btn active" data-speed="1">1x</button>
+            <button class="speed-btn" data-speed="2">2x</button>
+            <button class="speed-btn" data-speed="4">4x</button>
+            <button class="speed-btn" data-speed="8">8x</button>
+            <button class="speed-btn" data-speed="16">16x</button>
+          </div>
+          <span class="speed-hint">Teclas 1-5 | Espacio = Pausa</span>
+        </div>
+        <div class="slider-control">
+          <label for="sensorRange">Alcance Sensores: <span id="sensorValue">200</span>px</label>
+          <input type="range" id="sensorRange" min="50" max="400" value="200">
+        </div>
+        <button id="discardBrain" class="btn-danger">Reiniciar Evolución</button>
+      </div>
+
+      <div class="live-feed-container">
+        <div class="live-feed-header">
+          <span class="live-indicator"></span>
+          <span>ACTIVIDAD EN VIVO</span>
+        </div>
+        <div id="liveFeed" class="live-feed">
+          <div class="feed-item feed-waiting">Esperando primera generación...</div>
+        </div>
+      </div>
+
+      <div class="behavior-card">
+        <div class="behavior-header">
+          <span>📈 Tendencia</span>
+          <span id="trendIndicator" class="trend-up">--</span>
+        </div>
+        <div class="progress-bar-container">
+          <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+        </div>
+        <div id="behaviorAnalysis" class="behavior-text">
+          Analizando comportamiento...
+        </div>
+      </div>
+    </div>
+
+    <div class="simulation-container">
+      <canvas id="carCanvas"></canvas>
+    </div>
+  </div>
+</body>
+
+</html>

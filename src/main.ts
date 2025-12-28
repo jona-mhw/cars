@@ -5,6 +5,16 @@ import { Road } from './road';
 import { Network } from './network';
 import { Visualizer } from './visualizer';
 import { SensorConfig } from './sensor';
+import { DQNAgent, dqnAgent } from './qlearning';
+
+// ============================================================
+// LEARNING MODE SYSTEM
+// ============================================================
+type LearningMode = 'genetic' | 'qlearning';
+let currentLearningMode: LearningMode = 'genetic';
+
+// Estado para Q-Learning
+let prevCarStates: Map<number, { y: number; overtakes: number; sensors: number[]; angle: number }> = new Map();
 
 const carCanvas = document.getElementById("carCanvas") as HTMLCanvasElement;
 const carCtx = carCanvas.getContext("2d")!;
@@ -22,6 +32,9 @@ const liveFeed = document.getElementById("liveFeed") as HTMLDivElement;
 const trendIndicator = document.getElementById("trendIndicator") as HTMLSpanElement;
 const progressBar = document.getElementById("progressBar") as HTMLDivElement;
 const fpsCounter = document.getElementById("fpsCounter") as HTMLSpanElement;
+const learningModeLabel = document.getElementById("learningModeLabel") as HTMLSpanElement;
+const explorationLabel = document.getElementById("explorationRate") as HTMLSpanElement;
+const episodeCountLabel = document.getElementById("episodeCount") as HTMLSpanElement;
 
 // FPS tracking
 let lastTime = performance.now();
@@ -121,10 +134,12 @@ const road = new Road(carCanvas.width / 2, carCanvas.width * 0.9);
 
 // ============================================================
 // TRAFFIC SYSTEM: Dense, challenging, forces maneuvering
+// Ajustado para mejor experiencia en velocidad 1X
 // ============================================================
 const TRAFFIC_SPEED_BASE = 2;
 const TRAFFIC_SPEED_VARIATION = 0.8; // ±0.8 de variación
-const TRAFFIC_SPAWN_DISTANCE = 120; // Distance between traffic rows
+const TRAFFIC_SPAWN_DISTANCE = 80; // Reducido de 120 a 80 para obstáculos más cercanos
+const TRAFFIC_START_Y = -50; // Más cerca del inicio (antes -300)
 
 // Función para velocidad variable de obstáculos
 function getRandomTrafficSpeed(): number {
@@ -134,10 +149,10 @@ function getRandomTrafficSpeed(): number {
 function createTraffic(): Car[] {
   const cars: Car[] = [];
 
-  for (let row = 0; row < 40; row++) {
-    const baseY = -300 - (row * TRAFFIC_SPAWN_DISTANCE);
+  for (let row = 0; row < 50; row++) { // Aumentado de 40 a 50 filas
+    const baseY = TRAFFIC_START_Y - (row * TRAFFIC_SPAWN_DISTANCE);
     // Variación en Y para que no estén en filas perfectas
-    const yOffset = (Math.random() - 0.5) * 40;
+    const yOffset = (Math.random() - 0.5) * 30; // Reducido de 40 a 30
     const y = baseY + yOffset;
 
     let openLane: number;
@@ -203,10 +218,9 @@ function createTraffic(): Car[] {
 }
 
 // Track the furthest Y position reached to spawn more traffic
-// createTraffic genera 40 filas desde Y=-300, espaciadas cada TRAFFIC_SPAWN_DISTANCE
-// Última fila: -300 - 39*120 = -4980
-const INITIAL_TRAFFIC_ROWS = 40;
-let furthestY = -300 - (INITIAL_TRAFFIC_ROWS - 1) * TRAFFIC_SPAWN_DISTANCE;
+// createTraffic genera 50 filas desde Y=-50, espaciadas cada TRAFFIC_SPAWN_DISTANCE
+const INITIAL_TRAFFIC_ROWS = 50;
+let furthestY = TRAFFIC_START_Y - (INITIAL_TRAFFIC_ROWS - 1) * TRAFFIC_SPAWN_DISTANCE;
 let traffic = createTraffic();
 
 // Contador para generar obstáculos especiales
@@ -278,7 +292,10 @@ function updateTraffic(leaderY: number) {
   traffic = traffic.filter(car => car.y < leaderY + 500);
 }
 
-const N = 8; // Population size - small group for clearer visualization
+// Tamaño de población: mayor para Q-Learning (más experiencias)
+const N_GENETIC = 8;
+const N_QLEARNING = 12;
+let N = N_GENETIC;
 let generation = 1;
 let cars = generateCars(N);
 let bestCar = cars[0];
@@ -327,6 +344,180 @@ function discard() {
 }
 
 document.getElementById("discardBrain")?.addEventListener("click", discard);
+
+// ============================================================
+// LEARNING MODE SELECTOR
+// ============================================================
+function setLearningMode(mode: LearningMode) {
+  currentLearningMode = mode;
+
+  // Actualizar UI
+  const geneticBtn = document.getElementById("modeGenetic");
+  const qlBtn = document.getElementById("modeQL");
+  const modeDescription = document.getElementById("modeDescription");
+  const infoText = document.getElementById("infoText");
+
+  if (geneticBtn && qlBtn) {
+    geneticBtn.classList.toggle("active", mode === 'genetic');
+    qlBtn.classList.toggle("active", mode === 'qlearning');
+  }
+
+  if (learningModeLabel) {
+    learningModeLabel.textContent = mode === 'genetic' ? 'Neuroevolución' : 'Q-Learning';
+    learningModeLabel.style.color = mode === 'genetic' ? '#4ade80' : '#a855f7';
+    learningModeLabel.style.background = mode === 'genetic'
+      ? 'rgba(74, 222, 128, 0.15)'
+      : 'rgba(168, 85, 247, 0.15)';
+  }
+
+  if (modeDescription) {
+    modeDescription.textContent = mode === 'genetic'
+      ? 'Evolución de redes neuronales mediante selección natural'
+      : 'Aprendizaje por refuerzo con recompensas y experiencia';
+  }
+
+  if (infoText) {
+    infoText.textContent = mode === 'genetic'
+      ? '8 coches con IA compiten. El que llegue más lejos pasa su cerebro (con mutaciones) a la siguiente generación.'
+      : 'Los coches aprenden de sus errores. Cada acción recibe una recompensa y el agente optimiza su comportamiento.';
+  }
+
+  // Mostrar/ocultar estadísticas de Q-Learning
+  const qlStats = document.getElementById("qlStats");
+  if (qlStats) {
+    qlStats.style.display = mode === 'qlearning' ? 'block' : 'none';
+  }
+
+  // Reiniciar simulación con nuevo modo
+  resetSimulation();
+
+  addFeedItem({
+    type: 'learning',
+    message: `Modo: ${mode === 'genetic' ? 'Neuroevolución' : 'Q-Learning'}`,
+    icon: mode === 'genetic' ? '🧬' : '🧠'
+  });
+}
+
+function resetSimulation() {
+  generation = 1;
+  lastOvertakeCount = 0;
+  bestDistanceEver = 0;
+  prevCarStates.clear();
+
+  // Ajustar población según el modo
+  N = currentLearningMode === 'qlearning' ? N_QLEARNING : N_GENETIC;
+
+  if (currentLearningMode === 'qlearning') {
+    dqnAgent.reset();
+  }
+
+  cars = generateCars(N);
+
+  // Para Q-Learning, habilitar acciones externas y asignar brain para visualización
+  if (currentLearningMode === 'qlearning') {
+    for (const car of cars) {
+      car.useExternalActions = true;
+      car.externalActions = [1, 0]; // Iniciar yendo recto
+      car.brain = dqnAgent.getNetwork(); // Para visualización
+    }
+  }
+
+  ensureCarsStartMoving(cars);
+  cameraY = 100;
+  furthestY = TRAFFIC_START_Y - (INITIAL_TRAFFIC_ROWS - 1) * TRAFFIC_SPAWN_DISTANCE;
+  spawnedRows = INITIAL_TRAFFIC_ROWS;
+  traffic = createTraffic();
+}
+
+// Event listeners para selector de modo
+document.getElementById("modeGenetic")?.addEventListener("click", () => setLearningMode('genetic'));
+document.getElementById("modeQL")?.addEventListener("click", () => setLearningMode('qlearning'));
+
+// ============================================================
+// Q-LEARNING: Establecer acciones ANTES del update
+// ============================================================
+function setQLearningActions() {
+  for (const car of cars) {
+    if (car.damaged) continue;
+
+    // Obtener lecturas de sensores actuales
+    if (car.sensor) {
+      // Forzar actualización de sensores para obtener lecturas frescas
+      car.sensor.update(road.borders, traffic);
+      const currentSensors = car.sensor.readings.map((s: any) => s == null ? 0 : 1 - s.offset);
+
+      // Obtener acción del agente DQN
+      const action = dqnAgent.selectAction(currentSensors);
+
+      // Establecer acción externa para que el coche la use
+      car.externalActions = action;
+
+      // Guardar sensores para calcular recompensa después
+      if (!prevCarStates.has(car.id)) {
+        prevCarStates.set(car.id, {
+          y: car.y,
+          overtakes: car.overtakeCount,
+          sensors: currentSensors,
+          angle: car.angle
+        });
+      }
+    }
+  }
+}
+
+// ============================================================
+// Q-LEARNING: Procesar experiencias DESPUÉS del update
+// ============================================================
+function processQLearningExperiences() {
+  for (const car of cars) {
+    const prevState = prevCarStates.get(car.id);
+    if (!prevState) continue;
+
+    const currentSensors = car.sensor?.readings.map((s: any) => s == null ? 0 : 1 - s.offset) || [];
+
+    // Calcular recompensa
+    const reward = DQNAgent.calculateReward(
+      prevState.y,
+      car.y,
+      car.damaged,
+      car.overtakeCount,
+      prevState.overtakes,
+      car.speed,
+      currentSensors,
+      car.angle
+    );
+
+    // Almacenar experiencia
+    dqnAgent.storeExperience({
+      state: prevState.sensors,
+      action: car.externalActions || [1, 0],
+      reward,
+      nextState: currentSensors,
+      done: car.damaged
+    });
+
+    // Actualizar estado previo para siguiente frame
+    prevCarStates.set(car.id, {
+      y: car.y,
+      overtakes: car.overtakeCount,
+      sensors: currentSensors,
+      angle: car.angle
+    });
+  }
+
+  // Entrenar cada ciertos frames
+  if (frameCount % 5 === 0) {
+    dqnAgent.train();
+  }
+
+  // Actualizar estadísticas de UI
+  if (explorationLabel) {
+    explorationLabel.textContent = (dqnAgent.stats.explorationRate * 100).toFixed(1) + '%';
+  }
+  if (episodeCountLabel) {
+    episodeCountLabel.textContent = dqnAgent.stats.episodesCompleted.toString();
+  }
+}
 
 // Slider de largo de sensores
 const sensorSlider = document.getElementById("sensorRange") as HTMLInputElement;
@@ -434,9 +625,19 @@ function animate() {
         traffic[i].update(road.borders);
       }
 
+      // Q-Learning: establecer acciones ANTES del update
+      if (currentLearningMode === 'qlearning') {
+        setQLearningActions();
+      }
+
       // Update AI cars
       for (let i = 0; i < cars.length; i++) {
         cars[i].update(road.borders, traffic);
+      }
+
+      // Q-Learning: procesar experiencias DESPUÉS del update
+      if (currentLearningMode === 'qlearning') {
+        processQLearningExperiences();
       }
 
       // Spawn more traffic as leader advances
@@ -591,6 +792,27 @@ function nextGeneration() {
   const sortedCars = [...cars].sort((a, b) => b.fitness - a.fitness);
   bestCar = sortedCars[0];
 
+  // Para Q-Learning: terminar episodio y procesar experiencias finales
+  if (currentLearningMode === 'qlearning') {
+    // Registrar experiencias de colisión para todos los coches dañados
+    for (const car of cars) {
+      if (car.damaged) {
+        const prevState = prevCarStates.get(car.id);
+        if (prevState) {
+          dqnAgent.storeExperience({
+            state: prevState.sensors,
+            action: car.lastOutputs || [0, 0],
+            reward: -100, // Penalización por colisión
+            nextState: prevState.sensors,
+            done: true
+          });
+        }
+      }
+    }
+    dqnAgent.endEpisode();
+    prevCarStates.clear();
+  }
+
   // Get behavioral analysis from best car
   const bestCarSummary = bestCar.getSummary();
   const currentBestDistance = Math.abs(100 - bestCar.y);
@@ -634,55 +856,66 @@ function nextGeneration() {
   generation++;
 
   const nextCars = generateCars(N);
-  const baseMutationRate = 0.15; // Tasa de mutación fija
 
   // ============================================================
-  // SELECCIÓN MEJORADA: Usar top 3 como padres
+  // MODO Q-LEARNING: Habilitar acciones externas
   // ============================================================
-  const topParents = sortedCars.slice(0, 3).filter(c => c.brain);
+  if (currentLearningMode === 'qlearning') {
+    for (const car of nextCars) {
+      car.useExternalActions = true;
+      car.externalActions = [1, 0]; // Iniciar yendo recto
+      car.brain = dqnAgent.getNetwork(); // Para visualización
+    }
+  } else {
+    // ============================================================
+    // MODO GENÉTICO: Evolución tradicional
+    // ============================================================
+    const baseMutationRate = 0.15; // Tasa de mutación fija
 
-  // ============================================================
-  // INYECCIÓN DE DIVERSIDAD: Cada N generaciones, añadir cerebros frescos
-  // ============================================================
-  const injectDiversity = generation % DIVERSITY_INJECTION_INTERVAL === 0;
-  const diversityCount = injectDiversity ? Math.floor(N * DIVERSITY_RATIO) : 0;
+    // SELECCIÓN MEJORADA: Usar top 3 como padres
+    const topParents = sortedCars.slice(0, 3).filter(c => c.brain);
 
-  if (injectDiversity) {
-    addFeedItem({
-      type: 'learning',
-      message: `Inyectando ${diversityCount} cerebros nuevos`,
-      icon: '🔄'
-    });
-  }
+    // INYECCIÓN DE DIVERSIDAD: Cada N generaciones, añadir cerebros frescos
+    const injectDiversity = generation % DIVERSITY_INJECTION_INTERVAL === 0;
+    const diversityCount = injectDiversity ? Math.floor(N * DIVERSITY_RATIO) : 0;
 
-  for (let i = 0; i < nextCars.length; i++) {
-    if (i < diversityCount) {
-      // Cerebros completamente nuevos (inyección de diversidad)
-      // El carro ya viene con un cerebro aleatorio del constructor
-      continue;
+    if (injectDiversity) {
+      addFeedItem({
+        type: 'learning',
+        message: `Inyectando ${diversityCount} cerebros nuevos`,
+        icon: '🔄'
+      });
     }
 
-    // Seleccionar padre de los top 3
-    const parentIndex = i % topParents.length;
-    const parent = topParents[parentIndex];
+    for (let i = 0; i < nextCars.length; i++) {
+      if (i < diversityCount) {
+        // Cerebros completamente nuevos (inyección de diversidad)
+        // El carro ya viene con un cerebro aleatorio del constructor
+        continue;
+      }
 
-    if (parent && parent.brain) {
-      nextCars[i].brain = JSON.parse(JSON.stringify(parent.brain));
+      // Seleccionar padre de los top 3
+      const parentIndex = i % topParents.length;
+      const parent = topParents[parentIndex];
 
-      if (i !== 0 && nextCars[i].brain) {
-        // Variable mutation: algunos con cambios pequeños, otros con cambios grandes
-        let mutationRate: number;
-        if (i < N * 0.2) {
-          // 20% con mutación baja (explotar lo que funciona)
-          mutationRate = baseMutationRate * 0.3;
-        } else if (i < N * 0.6) {
-          // 40% con mutación media
-          mutationRate = baseMutationRate;
-        } else {
-          // 40% restante con mutación alta (explorar nuevas soluciones)
-          mutationRate = baseMutationRate * (1.5 + Math.random());
+      if (parent && parent.brain) {
+        nextCars[i].brain = JSON.parse(JSON.stringify(parent.brain));
+
+        if (i !== 0 && nextCars[i].brain) {
+          // Variable mutation: algunos con cambios pequeños, otros con cambios grandes
+          let mutationRate: number;
+          if (i < N * 0.2) {
+            // 20% con mutación baja (explotar lo que funciona)
+            mutationRate = baseMutationRate * 0.3;
+          } else if (i < N * 0.6) {
+            // 40% con mutación media
+            mutationRate = baseMutationRate;
+          } else {
+            // 40% restante con mutación alta (explorar nuevas soluciones)
+            mutationRate = baseMutationRate * (1.5 + Math.random());
+          }
+          Network.mutate(nextCars[i].brain!, mutationRate);
         }
-        Network.mutate(nextCars[i].brain!, mutationRate);
       }
     }
   }
@@ -698,7 +931,7 @@ function nextGeneration() {
   lastOvertakeCount = 0;
 
   // Reset traffic system for new generation
-  furthestY = -300 - (INITIAL_TRAFFIC_ROWS - 1) * TRAFFIC_SPAWN_DISTANCE;
+  furthestY = TRAFFIC_START_Y - (INITIAL_TRAFFIC_ROWS - 1) * TRAFFIC_SPAWN_DISTANCE;
   spawnedRows = INITIAL_TRAFFIC_ROWS;
   traffic = createTraffic();
 }

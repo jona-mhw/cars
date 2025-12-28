@@ -33,9 +33,43 @@
         <div class="legend-item"><span class="dot gray"></span> Chocado</div>
       </div>
 
+      <div class="learning-mode-selector">
+        <div class="mode-header">
+          <span class="mode-label">Modo de Aprendizaje</span>
+          <span id="learningModeLabel" class="mode-indicator">Neuroevolución</span>
+        </div>
+        <div class="mode-buttons">
+          <button id="modeGenetic" class="mode-btn active" title="Algoritmo Genético + Red Neuronal">
+            <span class="mode-icon">🧬</span>
+            <span>Neuroevolución</span>
+          </button>
+          <button id="modeQL" class="mode-btn" title="Deep Q-Learning con Experience Replay">
+            <span class="mode-icon">🧠</span>
+            <span>Q-Learning</span>
+          </button>
+        </div>
+        <div class="mode-description" id="modeDescription">
+          Evolución de redes neuronales mediante selección natural
+        </div>
+      </div>
+
+      <div id="qlStats" class="ql-stats" style="display: none;">
+        <div class="ql-stat-row">
+          <div class="ql-stat">
+            <span class="ql-label">Exploración (ε)</span>
+            <span id="explorationRate" class="ql-value">100%</span>
+          </div>
+          <div class="ql-stat">
+            <span class="ql-label">Episodios</span>
+            <span id="episodeCount" class="ql-value">0</span>
+          </div>
+        </div>
+        <div class="ql-hint">ε-greedy: explora mucho al inicio, después explota lo aprendido</div>
+      </div>
+
       <div class="info-box">
         <strong>¿Qué está pasando?</strong>
-        <p>8 coches con IA compiten. El que llegue más lejos pasa su cerebro (con mutaciones) a la siguiente generación.</p>
+        <p id="infoText">8 coches con IA compiten. El que llegue más lejos pasa su cerebro (con mutaciones) a la siguiente generación.</p>
       </div>
 
       <div class="stats-grid">
@@ -53,7 +87,7 @@
         </div>
         <div class="stat-card">
           <div class="stat-label">Vivos</div>
-          <div id="aliveCount" class="stat-value">0 / 8</div>
+          <div id="aliveCount" class="stat-value">0 / -</div>
         </div>
       </div>
 

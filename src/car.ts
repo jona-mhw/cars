@@ -127,6 +127,10 @@ export class Car {
   // Tipo de obstáculo para renderizado diferente
   obstacleType: 'car' | 'barrier' | 'danger' = 'car';
 
+  // Q-Learning: permite usar acciones externas en lugar del cerebro interno
+  useExternalActions: boolean = false;
+  externalActions: number[] | null = null;
+
   constructor(x: number, y: number, width: number, height: number, controlType: "AI" | "KEYS" | "DUMMY" = "AI", maxSpeed: number = 3) {
     this.x = x;
     this.y = y;
@@ -170,25 +174,43 @@ export class Car {
         this.sensor.update(roadBorders, traffic);
         sensorOffsets = this.sensor.readings.map((s: any) => s == null ? 0 : 1 - s.offset);
 
-        if (this.brain) {
-          const outputs = Network.feedForward(sensorOffsets, this.brain);
+        let outputs: number[];
+
+        // Q-Learning: usar acciones externas si están disponibles
+        if (this.useExternalActions && this.externalActions) {
+          outputs = this.externalActions;
           this.lastOutputs = [...outputs];
-
-          // CONTINUOUS CONTROL:
-          // output[0]: acceleration intensity (-1 to 1)
-          // output[1]: steering (-1 = full left, 0 = straight, 1 = full right)
-
-          // Acceleration: casi siempre acelerar (threshold bajo)
-          const accelIntensity = (outputs[0] + 1) / 2; // 0 to 1
-          this.controls.forward = accelIntensity > 0.1; // Solo frena si output muy negativo
-
-          // Steering: continuous value stored for smooth turning
-          this.steeringIntensity = outputs[1]; // -1 to 1
-
-          this.controls.left = false;
-          this.controls.right = false;
-          this.controls.reverse = false;
+          // Actualizar inputs del brain para visualización
+          if (this.brain && this.brain.levels.length > 0) {
+            for (let i = 0; i < sensorOffsets.length; i++) {
+              this.brain.levels[0].inputs[i] = sensorOffsets[i];
+            }
+            // También actualizar outputs para visualización
+            const lastLevel = this.brain.levels[this.brain.levels.length - 1];
+            lastLevel.outputs[0] = outputs[0];
+            lastLevel.outputs[1] = outputs[1];
+          }
+        } else if (this.brain) {
+          outputs = Network.feedForward(sensorOffsets, this.brain);
+          this.lastOutputs = [...outputs];
+        } else {
+          outputs = [1, 0]; // Por defecto: acelerar recto
         }
+
+        // CONTINUOUS CONTROL:
+        // output[0]: acceleration intensity (-1 to 1)
+        // output[1]: steering (-1 = full left, 0 = straight, 1 = full right)
+
+        // Acceleration: casi siempre acelerar (threshold bajo)
+        const accelIntensity = (outputs[0] + 1) / 2; // 0 to 1
+        this.controls.forward = accelIntensity > 0.1; // Solo frena si output muy negativo
+
+        // Steering: continuous value stored for smooth turning
+        this.steeringIntensity = outputs[1]; // -1 to 1
+
+        this.controls.left = false;
+        this.controls.right = false;
+        this.controls.reverse = false;
       }
 
       // Only AI cars check for collision
