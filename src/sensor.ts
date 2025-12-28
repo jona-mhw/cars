@@ -104,7 +104,13 @@ export class Sensor {
     }
 
     draw(ctx: CanvasRenderingContext2D) {
+        // Guard: no dibujar si los rayos no han sido inicializados
+        if (this.rays.length === 0) return;
+
         for (let i = 0; i < this.rayCount; i++) {
+            // Guard adicional por seguridad
+            if (!this.rays[i]) continue;
+
             let end = this.rays[i][1];
             if (this.readings[i]) end = this.readings[i];
 

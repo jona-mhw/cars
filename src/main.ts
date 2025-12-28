@@ -28,6 +28,9 @@ let lastTime = performance.now();
 let frameCount = 0;
 let fps = 60;
 
+// Time control - velocidad de simulación
+let timeScale = 1; // 1 = tiempo real, 2 = 2x, 4 = 4x, etc.
+
 // ============================================================
 // LIVE FEED SYSTEM - Real-time activity logging
 // ============================================================
@@ -200,18 +203,25 @@ function createTraffic(): Car[] {
 }
 
 // Track the furthest Y position reached to spawn more traffic
-let furthestY = 0;
+// createTraffic genera 40 filas desde Y=-300, espaciadas cada TRAFFIC_SPAWN_DISTANCE
+// Última fila: -300 - 39*120 = -4980
+const INITIAL_TRAFFIC_ROWS = 40;
+let furthestY = -300 - (INITIAL_TRAFFIC_ROWS - 1) * TRAFFIC_SPAWN_DISTANCE;
 let traffic = createTraffic();
 
 // Contador para generar obstáculos especiales
-let spawnedRows = 40; // Empezamos donde terminó createTraffic
+let spawnedRows = INITIAL_TRAFFIC_ROWS;
 
 // Spawn more traffic as the leader advances (infinite road)
 function updateTraffic(leaderY: number) {
-  const spawnThreshold = furthestY - 2000;
+  // Generar tráfico cuando el líder se acerca a 1500 unidades del último spawn
+  const spawnThreshold = furthestY + 1500;
 
+  // Si el líder está cerca del límite, generar más tráfico adelante
   if (leaderY < spawnThreshold) {
-    const rowsToAdd = Math.ceil((spawnThreshold - leaderY) / TRAFFIC_SPAWN_DISTANCE);
+    // Generar suficientes filas para estar siempre 3000 unidades adelante
+    const targetY = leaderY - 3000;
+    const rowsToAdd = Math.max(1, Math.ceil((furthestY - targetY) / TRAFFIC_SPAWN_DISTANCE));
 
     for (let i = 0; i < rowsToAdd; i++) {
       furthestY -= TRAFFIC_SPAWN_DISTANCE;
@@ -284,6 +294,8 @@ if (localStorage.getItem("bestBrain")) {
       Network.mutate(cars[i].brain!, 0.2); // Higher mutation when loading
     }
   }
+  // Asegurar que arranquen después de cargar cerebros
+  ensureCarsStartMoving(cars);
 }
 
 function generateCars(N: number) {
@@ -333,11 +345,70 @@ if (sensorSlider) {
   });
 }
 
+// Control de velocidad de simulación
+const speedButtons = document.querySelectorAll(".speed-btn");
+const speedIndicator = document.getElementById("speedIndicator") as HTMLSpanElement;
+
+function updateSpeedUI() {
+  speedButtons.forEach(btn => {
+    const scale = parseInt(btn.getAttribute("data-speed") || "1");
+    btn.classList.toggle("active", scale === timeScale);
+  });
+  if (speedIndicator) {
+    if (timeScale === 0) {
+      speedIndicator.textContent = "⏸ PAUSA";
+      speedIndicator.style.background = "rgba(248, 113, 113, 0.2)";
+      speedIndicator.style.color = "#f87171";
+    } else if (timeScale === 1) {
+      speedIndicator.textContent = "Tiempo Real";
+      speedIndicator.style.background = "rgba(74, 222, 128, 0.15)";
+      speedIndicator.style.color = "#4ade80";
+    } else {
+      speedIndicator.textContent = `${timeScale}x`;
+      speedIndicator.style.background = "rgba(251, 191, 36, 0.15)";
+      speedIndicator.style.color = "#fbbf24";
+    }
+  }
+}
+
+speedButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const newScale = parseInt(btn.getAttribute("data-speed") || "1");
+    timeScale = newScale;
+    updateSpeedUI();
+  });
+});
+
+// Atajos de teclado para velocidad
+document.addEventListener("keydown", (e) => {
+  if (e.key === "1") { timeScale = 1; updateSpeedUI(); }
+  else if (e.key === "2") { timeScale = 2; updateSpeedUI(); }
+  else if (e.key === "3") { timeScale = 4; updateSpeedUI(); }
+  else if (e.key === "4") { timeScale = 8; updateSpeedUI(); }
+  else if (e.key === "5") { timeScale = 16; updateSpeedUI(); }
+  else if (e.key === " ") { // Espacio para pausar/reanudar
+    e.preventDefault();
+    timeScale = timeScale === 0 ? 1 : 0;
+    updateSpeedUI();
+  }
+});
+
 function lerp(a: number, b: number, t: number) {
   return a + (b - a) * t;
 }
 
-function animate(time: number = 0) {
+// Retorna color según la distancia (progreso visual)
+function getDistanceColor(distance: number): string {
+  if (distance >= 12000) return "#fbbf24"; // Dorado - legendario
+  if (distance >= 8000) return "#ef4444";  // Rojo - extremo
+  if (distance >= 5000) return "#ec4899";  // Rosa - experto
+  if (distance >= 3000) return "#8b5cf6";  // Violeta - avanzado
+  if (distance >= 2000) return "#38bdf8";  // Azul - intermedio
+  if (distance >= 1000) return "#22d3ee";  // Cyan - principiante+
+  return "#4ade80";                         // Verde - inicio
+}
+
+function animate() {
   // FPS calculation
   frameCount++;
   const now = performance.now();
@@ -348,14 +419,45 @@ function animate(time: number = 0) {
     if (fpsCounter) fpsCounter.textContent = fps.toString();
   }
 
-  // Update traffic
-  for (let i = 0; i < traffic.length; i++) {
-    traffic[i].update(road.borders);
-  }
+  // ============================================================
+  // TIME SCALE: Ejecutar múltiples pasos de simulación por frame
+  // ============================================================
+  // Limitar generaciones por frame para evitar loops infinitos
+  const MAX_GENERATIONS_PER_FRAME = 3;
+  let generationsThisFrame = 0;
 
-  // Update AI cars
-  for (let i = 0; i < cars.length; i++) {
-    cars[i].update(road.borders, traffic);
+  // Solo simular si no está pausado (timeScale > 0)
+  if (timeScale > 0) {
+    for (let step = 0; step < timeScale; step++) {
+      // Update traffic
+      for (let i = 0; i < traffic.length; i++) {
+        traffic[i].update(road.borders);
+      }
+
+      // Update AI cars
+      for (let i = 0; i < cars.length; i++) {
+        cars[i].update(road.borders, traffic);
+      }
+
+      // Spawn more traffic as leader advances
+      const activeCarsInStep = cars.filter(c => !c.damaged);
+      if (activeCarsInStep.length > 0) {
+        const leader = activeCarsInStep.reduce((best, car) => car.y < best.y ? car : best, activeCarsInStep[0]);
+        updateTraffic(leader.y);
+      }
+
+      // Check if generation ended (all crashed)
+      const aliveCount = cars.filter(c => !c.damaged).length;
+      if (aliveCount === 0) {
+        nextGeneration();
+        generationsThisFrame++;
+
+        // Prevenir loops infinitos - máximo N generaciones por frame
+        if (generationsThisFrame >= MAX_GENERATIONS_PER_FRAME) {
+          break;
+        }
+      }
+    }
   }
 
   // Find best car - the one that traveled furthest (lowest Y)
@@ -373,14 +475,11 @@ function animate(time: number = 0) {
     ? activeCars.reduce((best, car) => car.y < best.y ? car : best, activeCars[0])
     : bestCar;
 
-  // Spawn more traffic as leader advances
-  if (activeCars.length > 0) {
-    updateTraffic(visualBestCar.y);
-  }
-
-  // Smooth camera movement (prevents teleportation)
+  // Smooth camera movement - adaptativo según velocidad
   const targetCameraY = visualBestCar.y;
-  cameraY = lerp(cameraY, targetCameraY, CAMERA_SMOOTHNESS);
+  // A mayor velocidad, cámara más rápida para no perder al líder
+  const adaptiveSmoothness = Math.min(CAMERA_SMOOTHNESS * (1 + timeScale * 0.5), 0.8);
+  cameraY = lerp(cameraY, targetCameraY, adaptiveSmoothness);
 
   carCanvas.height = window.innerHeight * 0.9; // clear
   networkCanvas.height = 300;
@@ -388,7 +487,7 @@ function animate(time: number = 0) {
   carCtx.save();
   carCtx.translate(0, -cameraY + carCanvas.height * 0.7);
 
-  road.draw(carCtx);
+  road.draw(carCtx, cameraY);
 
   // Draw traffic (obstacles) - el color se maneja internamente
   for (let i = 0; i < traffic.length; i++) {
@@ -457,6 +556,15 @@ function animate(time: number = 0) {
   fitnessLabel.innerText = `${maxDistance} m`;
   overtakeLabel.innerText = maxOvertakes.toString();
 
+  // Cambiar color de distancia según el progreso
+  const distanceColor = getDistanceColor(maxDistance);
+  fitnessLabel.style.color = distanceColor;
+  const fitnessCard = fitnessLabel.parentElement;
+  if (fitnessCard) {
+    fitnessCard.style.borderLeftColor = distanceColor;
+    fitnessCard.style.background = `${distanceColor}15`; // 15 = ~8% opacity in hex
+  }
+
   // Update status bar
   if (aliveCount > 0) {
     deathReasonLabel.innerText = `${aliveCount} en carrera...`;
@@ -467,14 +575,9 @@ function animate(time: number = 0) {
   }
 
   // Network Visualizer
-  networkCtx.lineDashOffset = -time / 50;
+  networkCtx.lineDashOffset = -performance.now() / 50;
   if (visualBestCar.brain) {
     Visualizer.drawNetwork(networkCtx, visualBestCar.brain);
-  }
-
-  // Generation only ends when ALL cars have crashed
-  if (aliveCount === 0) {
-    nextGeneration();
   }
 
   requestAnimationFrame(animate);
@@ -585,15 +688,30 @@ function nextGeneration() {
   }
 
   cars = nextCars;
+
+  // Garantizar que todos los carros arranquen correctamente
+  ensureCarsStartMoving(cars);
+
   cameraY = 100;
 
   // Reset tracking for new generation
   lastOvertakeCount = 0;
 
   // Reset traffic system for new generation
-  furthestY = 0;
-  spawnedRows = 40;
+  furthestY = -300 - (INITIAL_TRAFFIC_ROWS - 1) * TRAFFIC_SPAWN_DISTANCE;
+  spawnedRows = INITIAL_TRAFFIC_ROWS;
   traffic = createTraffic();
+}
+
+// Asegura que los carros AI tengan estado inicial correcto
+function ensureCarsStartMoving(carList: Car[]) {
+  for (const car of carList) {
+    if (car.controlType === "AI" && !car.damaged) {
+      car.speed = Math.max(car.speed, 1);
+      car.controls.forward = true;
+      car.angle = 0; // Asegurar orientación correcta (hacia arriba)
+    }
+  }
 }
 
 // ============================================================
