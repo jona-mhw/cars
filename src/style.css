@@ -294,6 +294,75 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+/* Speed Control */
+.speed-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--bg-base);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+}
+
+.speed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.speed-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.speed-indicator {
+  font-size: 11px;
+  color: var(--accent-success);
+  font-weight: 700;
+  padding: 2px 6px;
+  background: rgba(74, 222, 128, 0.15);
+  border-radius: 4px;
+}
+
+.speed-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.speed-btn {
+  flex: 1;
+  padding: 6px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.speed-btn:hover {
+  background: var(--bg-surface);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.speed-btn.active {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  border-color: var(--accent-primary);
+  color: white;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+}
+
+.speed-hint {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
 button {
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   border: none;

@@ -69,6 +69,20 @@
       </div>
 
       <div class="controls">
+        <div class="speed-control">
+          <div class="speed-header">
+            <span class="speed-label">Velocidad</span>
+            <span id="speedIndicator" class="speed-indicator">Tiempo Real</span>
+          </div>
+          <div class="speed-buttons">
+            <button class="speed-btn active" data-speed="1">1x</button>
+            <button class="speed-btn" data-speed="2">2x</button>
+            <button class="speed-btn" data-speed="4">4x</button>
+            <button class="speed-btn" data-speed="8">8x</button>
+            <button class="speed-btn" data-speed="16">16x</button>
+          </div>
+          <span class="speed-hint">Teclas 1-5 | Espacio = Pausa</span>
+        </div>
         <div class="slider-control">
           <label for="sensorRange">Alcance Sensores: <span id="sensorValue">200</span>px</label>
           <input type="range" id="sensorRange" min="50" max="400" value="200">

@@ -395,7 +395,14 @@ export class Car {
     if (this.speed > 0) this.speed -= this.friction;
     if (this.speed < 0) this.speed += this.friction;
 
-    if (Math.abs(this.speed) < this.friction) this.speed = 0;
+    // AI cars SIEMPRE mantienen velocidad mínima - no pueden detenerse
+    // Esto fuerza a que evolucionen para esquivar, no para quedarse quietos
+    const MIN_AI_SPEED = 1.5;
+    if (this.controlType === "AI" && !this.damaged && this.speed < MIN_AI_SPEED) {
+      this.speed = MIN_AI_SPEED;
+    }
+
+    if (Math.abs(this.speed) < this.friction && this.controlType !== "AI") this.speed = 0;
 
     if (this.speed != 0) {
       const flip = this.speed > 0 ? 1 : -1;
