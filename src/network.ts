@@ -18,14 +18,17 @@ export class Level {
     }
 
     static #randomize(level: Level) {
+        // Inicialización Xavier/Glorot escalada para tanh
+        // Mejor que random uniforme: evita saturación inicial de tanh
+        const fanIn = level.inputs.length;
+        const limit = Math.sqrt(6 / (fanIn + level.outputs.length));
         for (let i = 0; i < level.inputs.length; i++) {
             for (let j = 0; j < level.outputs.length; j++) {
-                level.weights[i][j] = Math.random() * 2 - 1;
+                level.weights[i][j] = (Math.random() * 2 - 1) * limit;
             }
         }
-
         for (let i = 0; i < level.biases.length; i++) {
-            level.biases[i] = Math.random() * 2 - 1;
+            level.biases[i] = (Math.random() * 2 - 1) * 0.1; // biases pequeños al inicio
         }
     }
 
@@ -69,20 +72,72 @@ export class Network {
         return outputs;
     }
 
-    static mutate(network: Network, amount: number = 1) {
+    // ============================================================
+    // MUTACIÓN GAUSSIANA ESPARSA
+    //   rate  = probabilidad de que un peso/bias específico mute (default 15%)
+    //   sigma = magnitud típica del jitter (default 0.3)
+    //
+    // Antes: lerp(peso, random[-1,1], amount) → ruido brutal y uniforme,
+    //        un peso bueno podía ser reemplazado por basura.
+    // Ahora: peso += gaussian()*sigma → la mayoría son ajustes pequeños,
+    //        ocasionalmente un salto grande (estadística natural).
+    //        Solo muta una fracción de pesos (esparsa, no todos).
+    // ============================================================
+    static mutate(network: Network, rate: number = 0.15, sigma: number = 0.3) {
         network.levels.forEach(level => {
             for (let i = 0; i < level.biases.length; i++) {
-                level.biases[i] = lerp(level.biases[i], Math.random() * 2 - 1, amount);
+                if (Math.random() < rate) {
+                    level.biases[i] += gaussian() * sigma;
+                    level.biases[i] = clamp(level.biases[i], -1, 1);
+                }
             }
-            for (let i = 0; i < level.inputs.length; i++) {
-                for (let j = 0; j < level.outputs.length; j++) {
-                    level.weights[i][j] = lerp(level.weights[i][j], Math.random() * 2 - 1, amount);
+            for (let i = 0; i < level.weights.length; i++) {
+                for (let j = 0; j < level.weights[i].length; j++) {
+                    if (Math.random() < rate) {
+                        level.weights[i][j] += gaussian() * sigma;
+                        level.weights[i][j] = clamp(level.weights[i][j], -1, 1);
+                    }
                 }
             }
         });
     }
+
+    // ============================================================
+    // CROSSOVER (cruzamiento uniforme)
+    // Mezcla genes de dos padres: cada peso/bias del hijo viene 50/50 de A o B.
+    // Permite explorar combinaciones que ningún padre tiene por sí solo.
+    // ============================================================
+    static crossover(parentA: Network, parentB: Network): Network {
+        const child = JSON.parse(JSON.stringify(parentA)) as Network;
+        // JSON.parse pierde el prototype → restaurarlo para que `mutate` funcione
+        Object.setPrototypeOf(child, Network.prototype);
+        child.levels.forEach(lvl => Object.setPrototypeOf(lvl, Level.prototype));
+
+        for (let l = 0; l < child.levels.length; l++) {
+            const a = parentA.levels[l];
+            const b = parentB.levels[l];
+            for (let i = 0; i < child.levels[l].biases.length; i++) {
+                child.levels[l].biases[i] = Math.random() < 0.5 ? a.biases[i] : b.biases[i];
+            }
+            for (let i = 0; i < child.levels[l].weights.length; i++) {
+                for (let j = 0; j < child.levels[l].weights[i].length; j++) {
+                    child.levels[l].weights[i][j] =
+                        Math.random() < 0.5 ? a.weights[i][j] : b.weights[i][j];
+                }
+            }
+        }
+        return child;
+    }
 }
 
-function lerp(A: number, B: number, t: number) {
-    return A + (B - A) * t;
+// Box-Muller transform: ruido gaussiano N(0, 1)
+function gaussian(): number {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function clamp(x: number, lo: number, hi: number): number {
+    return Math.max(lo, Math.min(hi, x));
 }

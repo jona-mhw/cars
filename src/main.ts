@@ -278,8 +278,9 @@ function updateTraffic(leaderY: number) {
   traffic = traffic.filter(car => car.y < leaderY + 500);
 }
 
-const N = 8; // Population size - small group for clearer visualization
+const N = 12; // Población más grande → más diversidad genética sin matar el FPS
 let generation = 1;
+let adaptiveMutationRate = 0.15; // Se ajusta dinámicamente según el trend de mejora
 let cars = generateCars(N);
 let bestCar = cars[0];
 
@@ -634,15 +635,29 @@ function nextGeneration() {
   generation++;
 
   const nextCars = generateCars(N);
-  const baseMutationRate = 0.15; // Tasa de mutación fija
+  const eligibleParents = sortedCars.filter(c => c.brain);
 
   // ============================================================
-  // SELECCIÓN MEJORADA: Usar top 3 como padres
+  // MUTACIÓN ADAPTATIVA
+  // Si las últimas generaciones no están mejorando → subir mutación (explorar más)
+  // Si están mejorando bien → bajarla (explotar lo que funciona)
   // ============================================================
-  const topParents = sortedCars.slice(0, 3).filter(c => c.brain);
+  const recentGens = AILearningLog.getLastNGenerations(5);
+  if (recentGens.length >= 4) {
+    const fitnesses = recentGens.map(g => g.maxDistance);
+    const recentAvg = (fitnesses[fitnesses.length - 1] + fitnesses[fitnesses.length - 2]) / 2;
+    const olderAvg = (fitnesses[0] + fitnesses[1]) / 2;
+    if (recentAvg <= olderAvg * 1.05) {
+      // Estancado: subir mutación (cap en 0.45)
+      adaptiveMutationRate = Math.min(adaptiveMutationRate * 1.15, 0.45);
+    } else if (recentAvg > olderAvg * 1.3) {
+      // Mejorando fuerte: bajar mutación (suelo en 0.08)
+      adaptiveMutationRate = Math.max(adaptiveMutationRate * 0.9, 0.08);
+    }
+  }
 
   // ============================================================
-  // INYECCIÓN DE DIVERSIDAD: Cada N generaciones, añadir cerebros frescos
+  // INYECCIÓN DE DIVERSIDAD: cerebros completamente nuevos cada N generaciones
   // ============================================================
   const injectDiversity = generation % DIVERSITY_INJECTION_INTERVAL === 0;
   const diversityCount = injectDiversity ? Math.floor(N * DIVERSITY_RATIO) : 0;
@@ -650,40 +665,55 @@ function nextGeneration() {
   if (injectDiversity) {
     addFeedItem({
       type: 'learning',
-      message: `Inyectando ${diversityCount} cerebros nuevos`,
+      message: `Inyectando ${diversityCount} cerebros nuevos · μ=${adaptiveMutationRate.toFixed(2)}`,
       icon: '🔄'
     });
   }
 
+  // Selección por torneo: 3 candidatos al azar, gana el de mejor fitness
+  function tournamentPick(): typeof eligibleParents[0] {
+    const k = 3;
+    let best = eligibleParents[Math.floor(Math.random() * eligibleParents.length)];
+    for (let t = 1; t < k; t++) {
+      const challenger = eligibleParents[Math.floor(Math.random() * eligibleParents.length)];
+      if (challenger.fitness > best.fitness) best = challenger;
+    }
+    return best;
+  }
+
   for (let i = 0; i < nextCars.length; i++) {
-    if (i < diversityCount) {
-      // Cerebros completamente nuevos (inyección de diversidad)
-      // El carro ya viene con un cerebro aleatorio del constructor
+    // Inyección de diversidad: cerebros aleatorios frescos
+    if (i < diversityCount) continue;
+
+    // ELITISMO: top 2 pasan SIN mutación (preserva lo que ya funciona)
+    if (i < 2 && eligibleParents.length > i) {
+      nextCars[i].brain = JSON.parse(JSON.stringify(eligibleParents[i].brain));
+      Object.setPrototypeOf(nextCars[i].brain!, Network.prototype);
+      nextCars[i].brain!.levels.forEach(lvl =>
+        Object.setPrototypeOf(lvl, Object.getPrototypeOf(eligibleParents[i].brain!.levels[0]))
+      );
       continue;
     }
 
-    // Seleccionar padre de los top 3
-    const parentIndex = i % topParents.length;
-    const parent = topParents[parentIndex];
+    // Resto: crossover de dos padres elegidos por torneo + mutación
+    const parentA = tournamentPick();
+    const parentB = tournamentPick();
 
-    if (parent && parent.brain) {
-      nextCars[i].brain = JSON.parse(JSON.stringify(parent.brain));
+    if (parentA?.brain && parentB?.brain) {
+      // Si el torneo eligió al mismo padre dos veces, solo clonamos
+      const child = parentA === parentB
+        ? JSON.parse(JSON.stringify(parentA.brain))
+        : Network.crossover(parentA.brain, parentB.brain);
 
-      if (i !== 0 && nextCars[i].brain) {
-        // Variable mutation: algunos con cambios pequeños, otros con cambios grandes
-        let mutationRate: number;
-        if (i < N * 0.2) {
-          // 20% con mutación baja (explotar lo que funciona)
-          mutationRate = baseMutationRate * 0.3;
-        } else if (i < N * 0.6) {
-          // 40% con mutación media
-          mutationRate = baseMutationRate;
-        } else {
-          // 40% restante con mutación alta (explorar nuevas soluciones)
-          mutationRate = baseMutationRate * (1.5 + Math.random());
-        }
-        Network.mutate(nextCars[i].brain!, mutationRate);
-      }
+      // Restaurar prototypes en caso de clon JSON
+      Object.setPrototypeOf(child, Network.prototype);
+      child.levels.forEach((lvl: any) => Object.setPrototypeOf(lvl, Object.getPrototypeOf(parentA.brain!.levels[0])));
+
+      // Mutación con escala variable: explorar más en los últimos
+      const explorationFactor = i < N * 0.5 ? 1.0 : 1.6;
+      Network.mutate(child, adaptiveMutationRate * explorationFactor, 0.3);
+
+      nextCars[i].brain = child;
     }
   }
 

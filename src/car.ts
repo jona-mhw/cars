@@ -233,9 +233,14 @@ export class Car {
         }
       }
 
-      // FITNESS = DISTANCE TRAVELED (simple and clear)
-      // Lower Y = further traveled (Y decreases as car moves forward)
-      this.fitness = 100 - this.y; // Distance in "meters"
+      // FITNESS COMPUESTO: distancia + overtakes (ponderados) + bonus por velocidad sostenida
+      // - Distancia base: 100 - y (en "metros")
+      // - Cada adelantamiento vale 200m equivalentes (recompensa el comportamiento útil)
+      // - Bonus pequeño por mantener velocidad (anti coches lentos pegados a obstáculos)
+      const distance = 100 - this.y;
+      const overtakeBonus = this.overtakeCount * 200;
+      const speedBonus = (this.speed / this.maxSpeed) * 0.5; // hasta +0.5 por frame
+      this.fitness = distance + overtakeBonus + speedBonus;
 
       // Log decisions periodically (every 60 frames) for analysis
       if (this.frameCount % 60 === 0) {
