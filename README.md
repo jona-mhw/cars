@@ -1,33 +1,52 @@
-# Neuro Drive: Simulación de IA Conducción
+# Neuro Drive
 
-Este proyecto es una demostración visual de **Aprendizaje Evolutivo** (Neuro-evolución). No verás una IA pre-entrenada; verás una población de agentes aprendiendo desde cero a través de sus propios errores.
+Simulación de neuroevolución: una población de autos aprende a conducir desde cero con
+una red neuronal (perceptrón multicapa) y un algoritmo genético. No hay modelo
+pre-entrenado; los agentes mejoran generación a generación a partir de sus propios choques.
 
-## 🚀 Tecnologías Utilizadas
-- **Lenguaje**: TypeScript
-- **Entorno**: Vite + Vanilla JS (sin frameworks pesados para máxima performance)
-- **Canvas API**: Renderizado personalizado de alta velocidad para la simulación y la red neuronal.
-- **Red Neuronal (MLP)**: Un Perceptrón Multicapa implementado desde cero sin librerías externas.
-- **Algoritmo Genético**: Selección y mutación para la evolución de los agentes.
-- **Local Storage**: Se usa para "guardar el mejor cerebro" localmente en tu navegador.
+Demo: https://jona-mhw.github.io/cars/
 
-## 🎨 ¿Qué significan los colores?
+## Stack
 
-### Coches de IA (los que aprenden):
-*   **Azul Claro Transparente**: Son la "población" actual. Cada uno tiene un cerebro ligeramente diferente.
-*   **Azul Brillante con Brillo (el líder)**: Es el coche que ha llegado más lejos en esta generación. Sus sensores (rayos amarillos) son visibles.
-*   **Gris**: Son agentes que han **chocado** (con los bordes o con un obstáculo) y han sido eliminados de la carrera.
+- TypeScript, sin frameworks. Build con Vite.
+- Render sobre Canvas API (la simulación y la visualización de la red).
+- Red neuronal (MLP) y algoritmo genético implementados a mano, sin librerías de ML.
+- El mejor "cerebro" de cada corrida se guarda en Local Storage.
 
-### Obstáculos (tráfico):
-*   **Naranja/Rojo**: Son los coches "tontos" que solo avanzan en línea recta. **La IA debe aprender a esquivarlos.**
+## Cómo leer la simulación
 
-## 🔄 ¿Qué comportamiento debo ver?
+Autos que aprenden:
+- Azul translúcido: la población actual; cada uno con una red ligeramente distinta.
+- Azul brillante: el líder de la generación (se ven sus sensores).
+- Gris: agentes que chocaron y quedaron fuera.
 
-1.  **Generación 1-3**: Los coches salen disparados, la mayoría chocan inmediatamente contra los bordes o el primer obstáculo. Es **normal**.
-2.  **Generación 5-10**: Empezarás a ver coches que logran mantenerse en la carretera por más tiempo.
-3.  **Generación 15+**: Deberías ver coches que esquivan los primeros obstáculos de forma consistente.
-4.  **Generación 50+**: La IA debería poder navegar una buena parte del recorrido.
+Tráfico:
+- Naranja/rojo: autos que solo avanzan recto; la red debe aprender a esquivarlos.
 
-> **Nota**: Si después de muchas generaciones no ves mejora, prueba presionar "Reiniciar Evolución" para empezar con cerebros aleatorios frescos, o aumentar la mutación a 0.3.
+## Qué esperar
 
----
-*Desarrollado como un ejercicio de aprendizaje automático visual.*
+- Generaciones 1–3: casi todos chocan de inmediato. Es lo normal.
+- Generaciones 5–10: algunos se mantienen más tiempo en pista.
+- Generaciones 15+: esquivan los primeros obstáculos de forma consistente.
+- Generaciones 50+: recorren buena parte del trazado.
+
+Si tras muchas generaciones no hay mejora, reinicia la evolución para partir con redes
+frescas, o sube la tasa de mutación a 0.3.
+
+## Cómo funciona
+
+El algoritmo genético usa selección por torneo, elitismo (los mejores pasan sin mutar),
+crossover uniforme entre redes y mutación gaussiana (Box-Muller). La tasa de mutación es
+adaptativa: sube cuando la población se estanca y baja cuando mejora. Los pesos se
+inicializan con Xavier/Glorot, escalado para activación tanh.
+
+## Desarrollo
+
+```
+npm install
+npm run dev      # servidor local
+npm run build    # build de producción
+```
+
+Proyecto de aprendizaje, partido del tutorial de neuroevolución de Radu
+Mariescu-Istodor y extendido con el algoritmo genético descrito arriba.
