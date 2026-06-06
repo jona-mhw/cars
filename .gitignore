@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Artefactos que no deben versionarse
+*.zip
+codebase-texto.txt
+image.png
+.claude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
